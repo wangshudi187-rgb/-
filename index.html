@@ -19,6 +19,13 @@
         <label for="passwordInput">Password</label>
         <input id="passwordInput" type="password" autocomplete="current-password" required />
       </div>
+      <div class="field">
+        <label for="loginUserSelect">选择用户</label>
+        <select id="loginUserSelect">
+          <option value="test">test</option>
+          <option value="main">main</option>
+        </select>
+      </div>
       <button class="btn primary block" type="submit">Login</button>
       <div class="auth-error" id="authError" aria-live="polite"></div>
     </form>
@@ -32,6 +39,13 @@
         <p class="subtitle">每日记录，长期看趋势。所有数据只保存在当前浏览器。</p>
       </div>
       <div class="actions">
+        <div class="user-switcher">
+          <label for="userSelect">当前用户</label>
+          <select id="userSelect">
+            <option value="test">test</option>
+            <option value="main">main</option>
+          </select>
+        </div>
         <button class="btn" id="backupFolderBtn" type="button">选择备份文件夹</button>
         <button class="btn" id="exportBtn" type="button">导出数据</button>
         <button class="btn" id="importBtn" type="button">导入数据</button>

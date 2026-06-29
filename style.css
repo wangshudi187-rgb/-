@@ -59,6 +59,22 @@
       font-weight: 650;
     }
 
+    .user-switcher {
+      display: grid;
+      gap: 4px;
+      min-width: 136px;
+    }
+
+    .user-switcher label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .user-switcher select {
+      min-height: 38px;
+      background: #fff;
+    }
+
     .app {
       width: min(1280px, calc(100% - 32px));
       margin: 0 auto;

@@ -1,7 +1,7 @@
 const PASSWORD = "123456";
 const AUTH_KEY = "ai-fat-loss-tracker-authenticated-v1";
-const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
-    const SETTINGS_KEY = "ai-fat-loss-tracker-settings-v1";
+const CURRENT_USER_KEY = "ai-fat-loss-tracker-current-user-v1";
+const DEFAULT_USERS = ["test", "main"];
     const BACKUP_DB = "ai-fat-loss-tracker-backup-db";
     const BACKUP_STORE = "handles";
     const BACKUP_HANDLE_KEY = "backup-directory";
@@ -9,6 +9,8 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     const $ = (selector) => document.querySelector(selector);
     const loginForm = $("#loginForm");
     const passwordInput = $("#passwordInput");
+    const loginUserSelect = $("#loginUserSelect");
+    const userSelect = $("#userSelect");
     const authError = $("#authError");
     const authScreen = $("#authScreen");
     const appShell = $("#appShell");
@@ -28,8 +30,10 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       dietControlled: $("#dietControlled")
     };
 
-    let records = loadRecords();
-    let settings = loadSettings();
+    let currentUser = localStorage.getItem(CURRENT_USER_KEY) || "main";
+    if (!DEFAULT_USERS.includes(currentUser)) currentUser = "main";
+    let records = [];
+    let settings = {};
     let chartRange = 7;
     let weightChart;
     let waistChart;
@@ -55,22 +59,39 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       return Number.isFinite(number) ? number : null;
     }
 
-    function loadRecords() {
+    function userDataKey(userId = currentUser) {
+      return `user_${userId}_data`;
+    }
+
+    function userSettingsKey(userId = currentUser) {
+      return `user_${userId}_settings`;
+    }
+
+    function userDataEnvelope(data = records, userId = currentUser) {
+      return {
+        user: userId,
+        data
+      };
+    }
+
+    function loadRecords(userId = currentUser) {
       try {
-        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed = JSON.parse(localStorage.getItem(userDataKey(userId)) || "null");
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && parsed.user === userId && Array.isArray(parsed.data)) return parsed.data;
+        return [];
       } catch {
         return [];
       }
     }
 
     function saveRecords() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      localStorage.setItem(userDataKey(), JSON.stringify(userDataEnvelope(records)));
     }
 
-    function loadSettings() {
+    function loadSettings(userId = currentUser) {
       try {
-        const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+        const parsed = JSON.parse(localStorage.getItem(userSettingsKey(userId)) || "{}");
         return parsed && typeof parsed === "object" ? parsed : {};
       } catch {
         return {};
@@ -78,7 +99,24 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     }
 
     function saveSettings() {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(userSettingsKey(), JSON.stringify(settings));
+    }
+
+    function syncUserSelectors() {
+      loginUserSelect.value = currentUser;
+      userSelect.value = currentUser;
+    }
+
+    function switchUser(userId) {
+      if (!DEFAULT_USERS.includes(userId)) return;
+      currentUser = userId;
+      localStorage.setItem(CURRENT_USER_KEY, currentUser);
+      syncUserSelectors();
+      records = loadRecords();
+      settings = loadSettings();
+      initializeForm();
+      renderAll();
+      toast(`已切换到 ${currentUser}`);
     }
 
     function supportsFileBackup() {
@@ -130,7 +168,7 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
 
     function safeBackupName(record) {
       const stamp = new Date().toISOString().replaceAll(":", "").replaceAll(".", "-");
-      return `${record.date}_${stamp}_记录.json`;
+      return `${currentUser}_${record.date}_${stamp}_记录.json`;
     }
 
     async function writeRecordBackup(record) {
@@ -143,6 +181,7 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       const payload = {
         type: "AI减脂进度追踪每日备份",
         backupPolicy: "append-only: create new file on each save; no read, delete, or edit of old backups",
+        user: currentUser,
         backedUpAt: new Date().toISOString(),
         record
       };
@@ -181,6 +220,7 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     function recordFromForm() {
       const carbInput = document.querySelector("input[name='carbLevel']:checked");
       return {
+        user: currentUser,
         id: fields.date.value,
         date: fields.date.value,
         activityDate: previousDateString(fields.date.value),
@@ -342,6 +382,24 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       $("#cardioAdvice").textContent = result.cardioAdvice;
       $("#carbAdvice").textContent = result.carbAdvice;
       $("#mainAdvice").textContent = result.mainAdvice;
+    }
+
+    function resetAnalysis() {
+      $("#analysisDate").textContent = "等待今日记录";
+      const pill = $("#statusPill");
+      pill.textContent = "--";
+      pill.className = "status-pill";
+      $("#statusReason").textContent = "保存记录后生成";
+      $("#trainToday").textContent = "--";
+      $("#trainReason").textContent = "--";
+      $("#riskLevel").textContent = "--";
+      $("#riskReason").textContent = "--";
+      $("#riskLevel").style.color = "";
+      $("#dailyScore").textContent = "--";
+      $("#dailyScoreNote").textContent = "--";
+      $("#cardioAdvice").textContent = "--";
+      $("#carbAdvice").textContent = "--";
+      $("#mainAdvice").textContent = "--";
     }
 
     function getWindowRecords(days) {
@@ -610,7 +668,11 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
 
     function renderAll(preferredRecord) {
       const record = preferredRecord || getCurrentRecord();
-      if (record) renderAnalysis(record);
+      if (record) {
+        renderAnalysis(record);
+      } else {
+        resetAnalysis();
+      }
       renderCharts();
       renderProgress();
       renderLossBreakdown();
@@ -696,6 +758,10 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       toast("目标已保存。");
     });
 
+    userSelect.addEventListener("change", (event) => {
+      switchUser(event.target.value);
+    });
+
     $("#range7").addEventListener("click", () => {
       chartRange = 7;
       $("#range7").classList.add("active");
@@ -728,12 +794,17 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     });
 
     $("#exportBtn").addEventListener("click", () => {
-      const data = JSON.stringify({ records, settings, exportedAt: new Date().toISOString() }, null, 2);
+      const data = JSON.stringify({
+        user: currentUser,
+        data: records,
+        settings,
+        exportedAt: new Date().toISOString()
+      }, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `fat-loss-tracker-${todayString()}.json`;
+      link.download = `fat-loss-tracker-${currentUser}-${todayString()}.json`;
       link.click();
       URL.revokeObjectURL(url);
     });
@@ -745,7 +816,14 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
       if (!file) return;
       try {
         const imported = JSON.parse(await file.text());
-        records = Array.isArray(imported) ? imported : Array.isArray(imported.records) ? imported.records : records;
+        records = Array.isArray(imported)
+          ? imported
+          : Array.isArray(imported.data)
+            ? imported.data
+            : Array.isArray(imported.records)
+              ? imported.records
+              : records;
+        records = records.map((record) => ({ ...record, user: currentUser }));
         settings = imported.settings && typeof imported.settings === "object" ? imported.settings : settings;
         saveRecords();
         saveSettings();
@@ -782,7 +860,11 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     }
 
     function initializeApp() {
+      syncUserSelectors();
+      records = loadRecords();
+      settings = loadSettings();
       if (appInitialized) {
+        initializeForm();
         renderAll();
         return;
       }
@@ -805,9 +887,12 @@ const STORAGE_KEY = "ai-fat-loss-tracker-records-v1";
     }
 
     function initializeAuth() {
+      syncUserSelectors();
       loginForm.addEventListener("submit", (event) => {
         event.preventDefault();
         if (passwordInput.value === PASSWORD) {
+          currentUser = loginUserSelect.value;
+          localStorage.setItem(CURRENT_USER_KEY, currentUser);
           localStorage.setItem(AUTH_KEY, "true");
           authError.textContent = "";
           passwordInput.value = "";
