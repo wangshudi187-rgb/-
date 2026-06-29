@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 减脂进度追踪</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./script.js" defer></script>
+</head>
+<body>
+  <section class="auth-screen" id="authScreen">
+    <form class="auth-card" id="loginForm">
+      <div>
+        <h1>AI 减脂进度追踪</h1>
+        <p class="subtitle">请输入访问密码</p>
+      </div>
+      <div class="field">
+        <label for="passwordInput">Password</label>
+        <input id="passwordInput" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="btn primary block" type="submit">Login</button>
+      <div class="auth-error" id="authError" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <div id="appShell" class="hidden">
+<main class="app">
+    <header class="topbar">
+      <div>
+        <h1>AI 减脂进度追踪</h1>
+        <p class="subtitle">每日记录，长期看趋势。所有数据只保存在当前浏览器。</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="backupFolderBtn" type="button">选择备份文件夹</button>
+        <button class="btn" id="exportBtn" type="button">导出数据</button>
+        <button class="btn" id="importBtn" type="button">导入数据</button>
+        <button class="btn danger" id="clearBtn" type="button">清空</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <section class="layout">
+      <div class="stack">
+        <form class="card" id="entryForm">
+          <div class="section-title">
+            <h2>输入区</h2>
+            <span class="hint" id="backupStatus">本地保存，备份未设置</span>
+          </div>
+
+          <div class="grid">
+            <div class="subsection">今天早上的身体数据</div>
+            <div class="field">
+              <label for="date">记录日期</label>
+              <input id="date" name="date" type="date" required />
+            </div>
+            <div class="field">
+              <label for="weight">体重 kg</label>
+              <input id="weight" name="weight" type="number" min="20" max="300" step="0.1" required />
+            </div>
+            <div class="field">
+              <label for="waist">腰围 cm</label>
+              <input id="waist" name="waist" type="number" min="30" max="220" step="0.1" required />
+            </div>
+            <div class="field">
+              <label for="neck">颈围 cm</label>
+              <input id="neck" name="neck" type="number" min="20" max="80" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="hip">臀围 cm</label>
+              <input id="hip" name="hip" type="number" min="40" max="180" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="thigh">大腿围 cm</label>
+              <input id="thigh" name="thigh" type="number" min="20" max="100" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="arm">上臂围 cm</label>
+              <input id="arm" name="arm" type="number" min="10" max="80" step="0.1" />
+            </div>
+            <div class="subsection">昨天的运动和饮食</div>
+            <div class="field">
+              <label for="steps">昨日步数</label>
+              <input id="steps" name="steps" type="number" min="0" max="100000" step="1" required />
+            </div>
+            <div class="field">
+              <label for="cardio">昨日有氧分钟</label>
+              <input id="cardio" name="cardio" type="number" min="0" max="360" step="1" required />
+            </div>
+            <div class="field full">
+              <label>昨日力量训练</label>
+              <div class="check-row">
+                <input id="strength" name="strength" type="checkbox" />
+                <span>昨天完成力量训练</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="trainingType">昨日训练类型</label>
+              <select id="trainingType" name="trainingType">
+                <option value="力量">力量</option>
+                <option value="Zone2">Zone2</option>
+                <option value="HIIT">HIIT</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dietControlled">昨日控制饮食</label>
+              <select id="dietControlled" name="dietControlled">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>昨日碳水摄入</label>
+              <div class="radio-row">
+                <label><input type="radio" name="carbLevel" value="低" checked />低</label>
+                <label><input type="radio" name="carbLevel" value="中" />中</label>
+                <label><input type="radio" name="carbLevel" value="高" />高</label>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn primary block" type="submit">保存并生成分析</button>
+        </form>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>目标设置</h2>
+            <span class="hint">用于进度与预计日期</span>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="startWeight">起始体重 kg</label>
+              <input id="startWeight" type="number" min="20" max="300" step="0.1" />
+            </div>
+            <div class="field">
+              <label for="targetWeight">目标体重 kg</label>
+              <input id="targetWeight" type="number" min="20" max="300" step="0.1" />
+            </div>
+            <div class="field full">
+              <label for="targetDate">目标日期</label>
+              <input id="targetDate" type="date" />
+            </div>
+          </div>
+          <button class="btn block" id="saveSettingsBtn" type="button">保存目标</button>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card">
+          <div class="section-title">
+            <h2>输出区</h2>
+            <span id="analysisDate" class="hint">等待今日记录</span>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="name">今日状态</div>
+              <div class="value"><span id="statusPill" class="status-pill">--</span></div>
+              <div id="statusReason" class="note">保存记录后生成</div>
+            </div>
+            <div class="metric">
+              <div class="name">训练建议</div>
+              <div id="trainToday" class="value">--</div>
+              <div id="trainReason" class="note">--</div>
+            </div>
+            <div class="metric">
+              <div class="name">负荷风险</div>
+              <div id="riskLevel" class="value">--</div>
+              <div id="riskReason" class="note">--</div>
+            </div>
+            <div class="metric">
+              <div class="name">每日达标</div>
+              <div id="dailyScore" class="value">--</div>
+              <div id="dailyScoreNote" class="note">--</div>
+            </div>
+          </div>
+
+          <div class="advice">
+            <div class="advice-item">
+              <div class="advice-label">建议有氧</div>
+              <div id="cardioAdvice" class="advice-text">--</div>
+            </div>
+            <div class="advice-item">
+              <div class="advice-label">碳水调整</div>
+              <div id="carbAdvice" class="advice-text">--</div>
+            </div>
+            <div class="advice-item">
+              <div class="advice-label">综合建议</div>
+              <div id="mainAdvice" class="advice-text">--</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>减重拆解</h2>
+            <span id="lossHint" class="hint">按体重记录自动计算</span>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="name">较昨日</div>
+              <div id="dailyDrop" class="value">--</div>
+              <div id="dailyDropNote" class="note">需要昨天记录</div>
+            </div>
+            <div class="metric">
+              <div class="name">累计已减</div>
+              <div id="totalLoss" class="value">--</div>
+              <div class="note">从第一天开始</div>
+            </div>
+            <div class="metric">
+              <div class="name">日均已减</div>
+              <div id="avgDailyLoss" class="value">--</div>
+              <div class="note">kg / 天</div>
+            </div>
+            <div class="metric">
+              <div class="name">还需减</div>
+              <div id="remainingLoss" class="value">--</div>
+              <div class="note">到目标体重</div>
+            </div>
+            <div class="metric">
+              <div class="name">每日任务</div>
+              <div id="dailyTask" class="value">--</div>
+              <div id="dailyTaskNote" class="note">设置目标日期后显示</div>
+            </div>
+            <div class="metric">
+              <div class="name">剩余天数</div>
+              <div id="daysLeft" class="value">--</div>
+              <div class="note">到目标日期</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>目标进度</h2>
+            <span id="progressHint" class="hint">需要至少 2 条体重记录</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-meta">
+              <span id="progressStart">当前 -- kg</span>
+              <span id="progressTarget">目标 -- kg</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+          </div>
+          <div class="metric-grid" style="margin-top: 14px;">
+            <div class="metric">
+              <div class="name">当前减脂速度</div>
+              <div id="weeklySpeed" class="value">--</div>
+              <div class="note">kg / 周</div>
+            </div>
+            <div class="metric">
+              <div class="name">距离目标</div>
+              <div id="targetGap" class="value">--</div>
+              <div class="note">kg</div>
+            </div>
+            <div class="metric">
+              <div class="name">预计达成</div>
+              <div id="etaDate" class="value">--</div>
+              <div class="note">按近期速度估算</div>
+            </div>
+            <div class="metric">
+              <div class="name">目标日期</div>
+              <div id="targetPlan" class="value">--</div>
+              <div id="targetPlanNote" class="note">未设置</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="chart-toolbar">
+            <div class="section-title" style="margin: 0;">
+              <h2>图表区</h2>
+            </div>
+            <div class="segmented" aria-label="图表范围">
+              <button id="range7" class="active" type="button">7天</button>
+              <button id="range30" type="button">30天</button>
+            </div>
+          </div>
+          <div class="charts">
+            <div class="chart-box">
+              <h3>体重趋势</h3>
+              <canvas id="weightChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>腰围趋势</h3>
+              <canvas id="waistChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>步数趋势</h3>
+              <canvas id="stepsChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>历史记录</h2>
+            <span class="hint">点击日期可载入编辑</span>
+          </div>
+          <div class="table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>体重</th>
+                  <th>腰围</th>
+                  <th>昨日步数</th>
+                  <th>臀围</th>
+                  <th>大腿</th>
+                  <th>昨日训练</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td class="empty" colspan="8">暂无记录</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  </div>
+</body>
+</html>
