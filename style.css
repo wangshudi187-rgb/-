@@ -137,6 +137,14 @@
       margin-bottom: 14px;
     }
 
+    .input-title-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .section-title h2 {
       margin: 0;
       font-size: 16px;
@@ -280,6 +288,92 @@
     .btn.block {
       width: 100%;
       margin-top: 14px;
+    }
+
+    .btn.small {
+      min-height: 32px;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) 54px;
+      align-items: stretch;
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .stepper-btn {
+      border: 0;
+      background: #f3f3ef;
+      color: var(--ink);
+      font-size: 26px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .stepper-btn:active {
+      background: #e5e5df;
+    }
+
+    .stepper-display {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+      min-width: 0;
+      padding: 8px 6px;
+      text-align: center;
+    }
+
+    .stepper-display strong {
+      font-size: 24px;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
+
+    .stepper-display span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .manual-entry {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .manual-entry summary,
+    .more-measures summary {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .manual-entry input {
+      margin-top: 6px;
+    }
+
+    .more-measures {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 12px;
+    }
+
+    .more-measures > summary {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .nested-grid {
+      margin-top: 12px;
     }
 
     .metric-grid {
@@ -490,6 +584,48 @@
       border-radius: var(--radius);
     }
 
+    .history-cards {
+      display: none;
+      gap: 10px;
+    }
+
+    .history-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .history-card-head,
+    .history-card-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .history-card-date {
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    .history-card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .history-card-grid strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+      margin-top: 2px;
+    }
+
     .empty {
       color: var(--muted);
       text-align: center;
@@ -558,5 +694,26 @@
       .advice-item {
         grid-template-columns: 1fr;
         gap: 4px;
+      }
+
+      .input-title-actions {
+        justify-content: flex-start;
+      }
+
+      .stepper {
+        grid-template-columns: 58px minmax(0, 1fr) 58px;
+        min-height: 64px;
+      }
+
+      .stepper-display strong {
+        font-size: 26px;
+      }
+
+      .table-wrap {
+        display: none;
+      }
+
+      .history-cards {
+        display: grid;
       }
     }

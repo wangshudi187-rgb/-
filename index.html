@@ -59,7 +59,10 @@
         <form class="card" id="entryForm">
           <div class="section-title">
             <h2>输入区</h2>
-            <span class="hint" id="backupStatus">本地保存，备份未设置</span>
+            <div class="input-title-actions">
+              <button class="btn small" id="copyPreviousBtn" type="button">复制昨日数据</button>
+              <span class="hint" id="backupStatus">本地保存，备份未设置</span>
+            </div>
           </div>
 
           <div class="grid">
@@ -70,36 +73,56 @@
             </div>
             <div class="field">
               <label for="weight">体重 kg</label>
-              <select id="weight" name="weight" class="picker-select" required></select>
+              <input id="weight" name="weight" type="hidden" required />
+              <div class="stepper" data-target="weight" data-step="0.1" data-min="40" data-max="150" data-decimals="1" data-unit="kg">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>70.0</strong><span>kg</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="decimal" min="40" max="150" step="0.01" data-manual-for="weight" />
+              </details>
             </div>
             <div class="field">
               <label for="waist">腰围 cm</label>
-              <input id="waist" name="waist" type="number" min="30" max="220" step="0.1" required />
-            </div>
-            <div class="field">
-              <label for="neck">颈围 cm</label>
-              <input id="neck" name="neck" type="number" min="20" max="80" step="0.1" />
-            </div>
-            <div class="field">
-              <label for="hip">臀围 cm</label>
-              <input id="hip" name="hip" type="number" min="40" max="180" step="0.1" />
-            </div>
-            <div class="field">
-              <label for="thigh">大腿围 cm</label>
-              <input id="thigh" name="thigh" type="number" min="20" max="100" step="0.1" />
-            </div>
-            <div class="field">
-              <label for="arm">上臂围 cm</label>
-              <input id="arm" name="arm" type="number" min="10" max="80" step="0.1" />
+              <input id="waist" name="waist" type="hidden" required />
+              <div class="stepper" data-target="waist" data-step="0.5" data-min="30" data-max="220" data-decimals="1" data-unit="cm">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>80.0</strong><span>cm</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="decimal" min="30" max="220" step="0.01" data-manual-for="waist" />
+              </details>
             </div>
             <div class="subsection">昨天的运动和饮食</div>
             <div class="field">
               <label for="steps">昨日步数</label>
-              <input id="steps" name="steps" type="number" min="0" max="100000" step="1" required />
+              <input id="steps" name="steps" type="hidden" required />
+              <div class="stepper" data-target="steps" data-step="500" data-min="0" data-max="100000" data-decimals="0" data-unit="steps">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>8000</strong><span>steps</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="numeric" min="0" max="100000" step="1" data-manual-for="steps" />
+              </details>
             </div>
             <div class="field">
               <label for="cardio">昨日有氧分钟</label>
-              <select id="cardio" name="cardio" class="picker-select" required></select>
+              <input id="cardio" name="cardio" type="hidden" required />
+              <div class="stepper" data-target="cardio" data-step="5" data-min="0" data-max="300" data-decimals="0" data-unit="min">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>0</strong><span>min</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="numeric" min="0" max="300" step="1" data-manual-for="cardio" />
+              </details>
             </div>
             <div class="field full">
               <label>昨日力量训练</label>
@@ -131,6 +154,63 @@
                 <label><input type="radio" name="carbLevel" value="高" />高</label>
               </div>
             </div>
+            <details class="more-measures field full">
+              <summary>更多围度</summary>
+              <div class="grid nested-grid">
+                <div class="field">
+                  <label for="neck">颈围 cm</label>
+                  <input id="neck" name="neck" type="hidden" />
+                  <div class="stepper" data-target="neck" data-step="0.5" data-min="20" data-max="80" data-decimals="1" data-unit="cm">
+                    <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                    <div class="stepper-display"><strong data-stepper-value>35.0</strong><span>cm</span></div>
+                    <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                  </div>
+                  <details class="manual-entry">
+                    <summary>手动输入</summary>
+                    <input type="number" inputmode="decimal" min="20" max="80" step="0.01" data-manual-for="neck" />
+                  </details>
+                </div>
+                <div class="field">
+                  <label for="hip">臀围 cm</label>
+                  <input id="hip" name="hip" type="hidden" />
+                  <div class="stepper" data-target="hip" data-step="0.5" data-min="40" data-max="180" data-decimals="1" data-unit="cm">
+                    <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                    <div class="stepper-display"><strong data-stepper-value>95.0</strong><span>cm</span></div>
+                    <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                  </div>
+                  <details class="manual-entry">
+                    <summary>手动输入</summary>
+                    <input type="number" inputmode="decimal" min="40" max="180" step="0.01" data-manual-for="hip" />
+                  </details>
+                </div>
+                <div class="field">
+                  <label for="thigh">大腿围 cm</label>
+                  <input id="thigh" name="thigh" type="hidden" />
+                  <div class="stepper" data-target="thigh" data-step="0.5" data-min="20" data-max="100" data-decimals="1" data-unit="cm">
+                    <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                    <div class="stepper-display"><strong data-stepper-value>55.0</strong><span>cm</span></div>
+                    <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                  </div>
+                  <details class="manual-entry">
+                    <summary>手动输入</summary>
+                    <input type="number" inputmode="decimal" min="20" max="100" step="0.01" data-manual-for="thigh" />
+                  </details>
+                </div>
+                <div class="field">
+                  <label for="arm">上臂围 cm</label>
+                  <input id="arm" name="arm" type="hidden" />
+                  <div class="stepper" data-target="arm" data-step="0.5" data-min="10" data-max="80" data-decimals="1" data-unit="cm">
+                    <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                    <div class="stepper-display"><strong data-stepper-value>30.0</strong><span>cm</span></div>
+                    <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                  </div>
+                  <details class="manual-entry">
+                    <summary>手动输入</summary>
+                    <input type="number" inputmode="decimal" min="10" max="80" step="0.01" data-manual-for="arm" />
+                  </details>
+                </div>
+              </div>
+            </details>
           </div>
 
           <button class="btn primary block" type="submit">保存并生成分析</button>
@@ -187,6 +267,16 @@
               <div id="dailyScore" class="value">--</div>
               <div id="dailyScoreNote" class="note">--</div>
             </div>
+            <div class="metric">
+              <div class="name">3日均重</div>
+              <div id="avg3Weight" class="value">--</div>
+              <div class="note">kg</div>
+            </div>
+            <div class="metric">
+              <div class="name">7日均重</div>
+              <div id="avg7Weight" class="value">--</div>
+              <div class="note">kg</div>
+            </div>
           </div>
 
           <div class="advice">
@@ -201,6 +291,10 @@
             <div class="advice-item">
               <div class="advice-label">综合建议</div>
               <div id="mainAdvice" class="advice-text">--</div>
+            </div>
+            <div class="advice-item">
+              <div class="advice-label">趋势提醒</div>
+              <div id="trendAdvice" class="advice-text">--</div>
             </div>
           </div>
         </section>
@@ -332,6 +426,7 @@
               </tbody>
             </table>
           </div>
+          <div class="history-cards" id="historyCards"></div>
         </section>
       </div>
     </section>

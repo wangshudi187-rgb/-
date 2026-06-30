@@ -40,6 +40,7 @@ const DEFAULT_USERS = ["test", "main"];
     let stepsChart;
     let backupDirectoryHandle = null;
     let appInitialized = false;
+    let steppersInitialized = false;
 
     function todayString() {
       const now = new Date();
@@ -63,50 +64,72 @@ const DEFAULT_USERS = ["test", "main"];
       return Number(value).toFixed(digits);
     }
 
-    function populatePicker(select, options, formatter = (value) => String(value)) {
-      select.innerHTML = options.map((value) => {
-        const formatted = formatter(value);
-        return `<option value="${formatted}">${formatted}</option>`;
-      }).join("");
-    }
-
-    function populateNumericPickers() {
-      const weights = [];
-      for (let value = 40; value <= 150.0001; value += 0.1) {
-        weights.push(value);
-      }
-      populatePicker(fields.weight, weights, (value) => formatFixed(value, 2));
-
-      const cardioMinutes = [];
-      for (let value = 0; value <= 300; value += 5) {
-        cardioMinutes.push(value);
-      }
-      populatePicker(fields.cardio, cardioMinutes, (value) => String(value));
-    }
-
-    function nearestOptionValue(select, value) {
-      const numeric = toNumber(value);
-      if (numeric === null) return select.options[0]?.value || "";
-      let nearest = select.options[0]?.value || "";
-      let distance = Infinity;
-      for (const option of select.options) {
-        const optionValue = Number(option.value);
-        const optionDistance = Math.abs(optionValue - numeric);
-        if (optionDistance < distance) {
-          nearest = option.value;
-          distance = optionDistance;
-        }
-      }
-      return nearest;
-    }
-
-    function setPickerValue(select, value, fallback) {
-      select.value = nearestOptionValue(select, value ?? fallback);
-    }
-
     function defaultWeightValue() {
       const latest = latestRecord();
       return latest && latest.weight !== null ? latest.weight : 70;
+    }
+
+    function stepperConfig(target) {
+      const stepper = document.querySelector(`.stepper[data-target="${target}"]`);
+      if (!stepper) return null;
+      return {
+        stepper,
+        input: document.getElementById(target),
+        display: stepper.querySelector("[data-stepper-value]"),
+        manual: document.querySelector(`[data-manual-for="${target}"]`),
+        step: Number(stepper.dataset.step || 1),
+        min: Number(stepper.dataset.min || 0),
+        max: Number(stepper.dataset.max || 999999),
+        decimals: Number(stepper.dataset.decimals || 0)
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function normalizeStepperValue(config, value, fallback = config.min) {
+      const numeric = toNumber(value);
+      const base = numeric === null ? fallback : numeric;
+      const stepped = Math.round(base / config.step) * config.step;
+      return clamp(stepped, config.min, config.max);
+    }
+
+    function setStepperValue(target, value, fallback) {
+      const config = stepperConfig(target);
+      if (!config) return;
+      const normalized = normalizeStepperValue(config, value, fallback);
+      const formatted = normalized.toFixed(config.decimals);
+      config.input.value = formatted;
+      config.display.textContent = formatted;
+      if (config.manual) config.manual.value = formatted;
+    }
+
+    function changeStepperValue(target, direction) {
+      const config = stepperConfig(target);
+      if (!config) return;
+      const current = toNumber(config.input.value) ?? config.min;
+      setStepperValue(target, current + direction * config.step, current);
+    }
+
+    function initializeSteppers() {
+      if (steppersInitialized) return;
+      document.querySelectorAll(".stepper").forEach((stepper) => {
+        const target = stepper.dataset.target;
+        stepper.querySelectorAll("[data-step-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const direction = button.dataset.stepAction === "increase" ? 1 : -1;
+            changeStepperValue(target, direction);
+          });
+        });
+      });
+
+      document.querySelectorAll("[data-manual-for]").forEach((input) => {
+        input.addEventListener("change", () => {
+          setStepperValue(input.dataset.manualFor, input.value, input.value);
+        });
+      });
+      steppersInitialized = true;
     }
 
     function userDataKey(userId = currentUser) {
@@ -293,19 +316,44 @@ const DEFAULT_USERS = ["test", "main"];
     function fillForm(record) {
       if (!record) return;
       fields.date.value = record.date || todayString();
-      setPickerValue(fields.weight, record.weight, defaultWeightValue());
-      fields.waist.value = record.waist ?? "";
-      fields.steps.value = record.steps ?? "";
-      fields.neck.value = record.neck ?? "";
-      fields.hip.value = record.hip ?? "";
-      fields.thigh.value = record.thigh ?? "";
-      fields.arm.value = record.arm ?? "";
-      setPickerValue(fields.cardio, record.cardio, 0);
+      setStepperValue("weight", record.weight, defaultWeightValue());
+      setStepperValue("waist", record.waist, 80);
+      setStepperValue("steps", record.steps, 8000);
+      setStepperValue("neck", record.neck, 35);
+      setStepperValue("hip", record.hip, 95);
+      setStepperValue("thigh", record.thigh, 55);
+      setStepperValue("arm", record.arm, 30);
+      setStepperValue("cardio", record.cardio, 0);
       fields.strength.checked = Boolean(record.strength);
       fields.trainingType.value = record.trainingType || "力量";
       fields.dietControlled.value = record.dietControlled || "yes";
       const carb = document.querySelector(`input[name='carbLevel'][value='${record.carbLevel || "低"}']`);
       if (carb) carb.checked = true;
+    }
+
+    function copyPreviousData() {
+      const currentDate = fields.date.value || todayString();
+      const previous = sortedRecords().filter((item) => item.date < currentDate).pop() || latestRecord();
+      if (!previous) {
+        toast("暂无历史记录可复制。");
+        return;
+      }
+
+      fields.date.value = todayString();
+      setStepperValue("weight", previous.weight, defaultWeightValue());
+      setStepperValue("waist", previous.waist, 80);
+      setStepperValue("neck", previous.neck, 35);
+      setStepperValue("hip", previous.hip, 95);
+      setStepperValue("thigh", previous.thigh, 55);
+      setStepperValue("arm", previous.arm, 30);
+      setStepperValue("steps", previous.steps, 8000);
+      setStepperValue("cardio", previous.cardio, 0);
+      fields.strength.checked = Boolean(previous.strength);
+      fields.trainingType.value = previous.trainingType || "力量";
+      fields.dietControlled.value = previous.dietControlled || "yes";
+      const carb = document.querySelector(`input[name='carbLevel'][value='${previous.carbLevel || "低"}']`);
+      if (carb) carb.checked = true;
+      toast("已复制最近一条记录，日期保持今天。");
     }
 
     function upsertRecord(record) {
@@ -336,11 +384,32 @@ const DEFAULT_USERS = ["test", "main"];
       return recent[recent.length - 1].waist < recent[0].waist;
     }
 
+    function averageWeight(days, throughDate) {
+      const recent = sortedRecords()
+        .filter((item) => item.date <= throughDate && item.weight !== null)
+        .slice(-days);
+      if (!recent.length) return null;
+      return recent.reduce((sum, item) => sum + item.weight, 0) / recent.length;
+    }
+
+    function recentRecords(days, throughDate) {
+      return sortedRecords().filter((item) => item.date <= throughDate).slice(-days);
+    }
+
+    function countRecent(recordsList, predicate) {
+      return recordsList.filter(predicate).length;
+    }
+
     function analyze(record) {
       if (!record) return null;
 
       const plateau = isPlateau(record);
       const waistImproving = isWaistImproving(record);
+      const avg3 = averageWeight(3, record.date);
+      const avg7 = averageWeight(7, record.date);
+      const last3 = recentRecords(3, record.date);
+      const lowStepDays = countRecent(last3, (item) => (item.steps ?? 0) < 8000);
+      const highCardioDays = countRecent(last3, (item) => (item.cardio ?? 0) > 90);
       const highTrainingLoad = record.cardio > 90 || (record.trainingType === "HIIT" && record.cardio >= 45);
       let status = "CUT";
       let statusReason = waistImproving ? "腰围趋势在下降，减脂仍在推进。" : "今天早上的体重和围度已记录，继续观察趋势。";
@@ -394,6 +463,22 @@ const DEFAULT_USERS = ["test", "main"];
         status === "PLATEAU" ? "平台期先看 7-14 天均值，并同步看腰围变化。" : "继续看体重和围度双趋势，不用过度解读单日体重。"
       ].join(" ");
 
+      const trendMessages = [];
+      if (avg3 !== null) trendMessages.push(`3日均重 ${avg3.toFixed(1)}kg`);
+      if (avg7 !== null) trendMessages.push(`7日均重 ${avg7.toFixed(1)}kg`);
+      if (plateau && waistImproving) {
+        trendMessages.push("体重不降但腰围下降，可能仍在减脂，不必只看体重。");
+      }
+      if (lowStepDays >= 2) {
+        trendMessages.push("最近多日步数不足，建议提高日常活动量。");
+      }
+      if (highCardioDays >= 2) {
+        trendMessages.push("最近多日有氧偏高，注意恢复。");
+      }
+      if (!trendMessages.length) {
+        trendMessages.push("继续看均值趋势，别被单日波动带节奏。");
+      }
+
       return {
         status,
         statusReason,
@@ -404,6 +489,9 @@ const DEFAULT_USERS = ["test", "main"];
         cardioAdvice,
         carbAdvice,
         mainAdvice,
+        trendAdvice: trendMessages.join(" "),
+        avg3,
+        avg7,
         dailyScore: `${passed}/4`,
         dailyScoreNote: passed >= 4 ? "达标很好" : passed >= 3 ? "基本达标" : "昨日执行偏弱"
       };
@@ -432,6 +520,9 @@ const DEFAULT_USERS = ["test", "main"];
       $("#cardioAdvice").textContent = result.cardioAdvice;
       $("#carbAdvice").textContent = result.carbAdvice;
       $("#mainAdvice").textContent = result.mainAdvice;
+      $("#trendAdvice").textContent = result.trendAdvice;
+      $("#avg3Weight").textContent = result.avg3 === null ? "--" : result.avg3.toFixed(1);
+      $("#avg7Weight").textContent = result.avg7 === null ? "--" : result.avg7.toFixed(1);
     }
 
     function resetAnalysis() {
@@ -450,6 +541,9 @@ const DEFAULT_USERS = ["test", "main"];
       $("#cardioAdvice").textContent = "--";
       $("#carbAdvice").textContent = "--";
       $("#mainAdvice").textContent = "--";
+      $("#trendAdvice").textContent = "--";
+      $("#avg3Weight").textContent = "--";
+      $("#avg7Weight").textContent = "--";
     }
 
     function getWindowRecords(days) {
@@ -696,9 +790,11 @@ const DEFAULT_USERS = ["test", "main"];
 
     function renderHistory() {
       const body = $("#historyBody");
+      const cards = $("#historyCards");
       const sorted = sortedRecords().reverse();
       if (!sorted.length) {
         body.innerHTML = `<tr><td class="empty" colspan="8">暂无记录</td></tr>`;
+        cards.innerHTML = `<div class="empty">暂无记录</div>`;
         return;
       }
 
@@ -713,6 +809,25 @@ const DEFAULT_USERS = ["test", "main"];
           <td>${item.strength ? "力量" : item.trainingType || "--"}</td>
           <td><button class="btn danger" type="button" data-delete="${item.date}">删除</button></td>
         </tr>
+      `).join("");
+
+      cards.innerHTML = sorted.map((item) => `
+        <article class="history-card">
+          <div class="history-card-head">
+            <div class="history-card-date">${item.date}</div>
+            <span class="status-pill">${item.strength ? "力量" : item.trainingType || "--"}</span>
+          </div>
+          <div class="history-card-grid">
+            <div>体重<strong>${item.weight ?? "--"} kg</strong></div>
+            <div>腰围<strong>${item.waist ?? "--"} cm</strong></div>
+            <div>步数<strong>${item.steps ?? "--"}</strong></div>
+            <div>有氧<strong>${item.cardio ?? "--"} min</strong></div>
+          </div>
+          <div class="history-card-actions">
+            <button class="btn" type="button" data-load="${item.date}">编辑</button>
+            <button class="btn danger" type="button" data-delete="${item.date}">删除</button>
+          </div>
+        </article>
       `).join("");
     }
 
@@ -738,7 +853,6 @@ const DEFAULT_USERS = ["test", "main"];
     }
 
     function initializeForm() {
-      populateNumericPickers();
       fields.date.value = todayString();
       $("#startWeight").value = settings.startWeight ?? "";
       $("#targetWeight").value = settings.targetWeight ?? "";
@@ -747,13 +861,14 @@ const DEFAULT_USERS = ["test", "main"];
       if (today) {
         fillForm(today);
       } else {
-        setPickerValue(fields.weight, defaultWeightValue(), 70);
-        fields.steps.value = "";
-        fields.neck.value = "";
-        fields.hip.value = "";
-        fields.thigh.value = "";
-        fields.arm.value = "";
-        setPickerValue(fields.cardio, 0, 0);
+        setStepperValue("weight", defaultWeightValue(), 70);
+        setStepperValue("waist", latestRecord()?.waist, 80);
+        setStepperValue("steps", 8000, 8000);
+        setStepperValue("neck", latestRecord()?.neck, 35);
+        setStepperValue("hip", latestRecord()?.hip, 95);
+        setStepperValue("thigh", latestRecord()?.thigh, 55);
+        setStepperValue("arm", latestRecord()?.arm, 30);
+        setStepperValue("cardio", 0, 0);
       }
     }
 
@@ -810,6 +925,8 @@ const DEFAULT_USERS = ["test", "main"];
       toast("目标已保存。");
     });
 
+    $("#copyPreviousBtn").addEventListener("click", copyPreviousData);
+
     userSelect.addEventListener("change", (event) => {
       switchUser(event.target.value);
     });
@@ -828,7 +945,7 @@ const DEFAULT_USERS = ["test", "main"];
       renderCharts();
     });
 
-    $("#historyBody").addEventListener("click", (event) => {
+    function handleHistoryClick(event) {
       const loadDate = event.target.dataset.load;
       const deleteDate = event.target.dataset.delete;
       if (loadDate) {
@@ -843,7 +960,10 @@ const DEFAULT_USERS = ["test", "main"];
         renderAll();
         toast("记录已删除。");
       }
-    });
+    }
+
+    $("#historyBody").addEventListener("click", handleHistoryClick);
+    $("#historyCards").addEventListener("click", handleHistoryClick);
 
     $("#exportBtn").addEventListener("click", () => {
       const data = JSON.stringify({
@@ -920,6 +1040,7 @@ const DEFAULT_USERS = ["test", "main"];
         renderAll();
         return;
       }
+      initializeSteppers();
       initializeForm();
       renderAll();
       initializeBackup();
