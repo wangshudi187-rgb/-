@@ -14,7 +14,9 @@ const DEFAULT_USERS = ["test", "main"];
     const authError = $("#authError");
     const authScreen = $("#authScreen");
     const appShell = $("#appShell");
+    const appRoot = $("#appRoot");
     const form = $("#entryForm");
+    const hasCardio = $("#hasCardio");
     const fields = {
       date: $("#date"),
       weight: $("#weight"),
@@ -42,6 +44,7 @@ const DEFAULT_USERS = ["test", "main"];
     let appInitialized = false;
     let steppersInitialized = false;
     let lastDeletedRecord = null;
+    let activeTab = "record";
 
     function todayString() {
       const now = new Date();
@@ -111,6 +114,36 @@ const DEFAULT_USERS = ["test", "main"];
       if (!config) return;
       const current = toNumber(config.input.value) ?? config.min;
       setStepperValue(target, current + direction * config.step, current);
+    }
+
+    function setActiveTab(tab) {
+      activeTab = tab;
+      appRoot.classList.remove("view-record", "view-advice", "view-trend", "view-data");
+      appRoot.classList.add(`view-${tab}`);
+      document.querySelectorAll("[data-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === tab);
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (tab === "trend") {
+        renderCharts();
+        window.setTimeout(() => {
+          [weightChart, waistChart, stepsChart].forEach((chart) => chart && chart.resize());
+        }, 80);
+      }
+      if (tab === "data") renderHistory();
+    }
+
+    function updateCardioDetails() {
+      const enabled = hasCardio.value === "yes";
+      document.querySelectorAll(".cardio-detail").forEach((element) => {
+        element.classList.toggle("hidden", !enabled);
+      });
+      if (!enabled) {
+        setStepperValue("cardio", 0, 0);
+        fields.trainingType.value = "力量";
+      } else if (fields.trainingType.value === "力量") {
+        fields.trainingType.value = "Zone2";
+      }
     }
 
     function initializeSteppers() {
@@ -332,6 +365,7 @@ const DEFAULT_USERS = ["test", "main"];
     }
 
     function recordFromForm() {
+      updateCardioDetails();
       const carbInput = document.querySelector("input[name='carbLevel']:checked");
       return {
         user: currentUser,
@@ -365,11 +399,13 @@ const DEFAULT_USERS = ["test", "main"];
       setStepperValue("thigh", record.thigh, 55);
       setStepperValue("arm", record.arm, 30);
       setStepperValue("cardio", record.cardio, 0);
+      hasCardio.value = (record.cardio ?? 0) > 0 ? "yes" : "no";
       fields.strength.checked = Boolean(record.strength);
       fields.trainingType.value = record.trainingType || "力量";
       fields.dietControlled.value = record.dietControlled || "yes";
       const carb = document.querySelector(`input[name='carbLevel'][value='${record.carbLevel || "低"}']`);
       if (carb) carb.checked = true;
+      updateCardioDetails();
     }
 
     function copyPreviousData() {
@@ -984,6 +1020,9 @@ const DEFAULT_USERS = ["test", "main"];
         setStepperValue("thigh", latestRecord()?.thigh, 55);
         setStepperValue("arm", latestRecord()?.arm, 30);
         setStepperValue("cardio", 0, 0);
+        hasCardio.value = "no";
+        fields.trainingType.value = "力量";
+        updateCardioDetails();
       }
     }
 
@@ -997,10 +1036,11 @@ const DEFAULT_USERS = ["test", "main"];
         saveSettings();
       }
       renderAll(record);
+      setActiveTab("advice");
       try {
         const backup = await writeRecordBackup(record);
         renderBackupStatus();
-        toast(backup.skipped ? `已保存，${backup.reason}。` : "已保存，并写入独立备份文件。");
+        toast(backup.skipped ? `已保存，${backup.reason}。` : "已保存，已切到建议页。");
       } catch (error) {
         renderBackupStatus("本地已保存，备份写入失败");
         toast("本地已保存，但备份写入失败。");
@@ -1046,11 +1086,12 @@ const DEFAULT_USERS = ["test", "main"];
       switchUser(event.target.value);
     });
 
-    document.querySelector(".quick-nav").addEventListener("click", (event) => {
-      const button = event.target.closest("[data-scroll-target]");
+    hasCardio.addEventListener("change", updateCardioDetails);
+
+    document.querySelector(".tab-nav").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-tab]");
       if (!button) return;
-      const target = document.getElementById(button.dataset.scrollTarget);
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveTab(button.dataset.tab);
     });
 
     $("#range7").addEventListener("click", () => {
@@ -1074,7 +1115,7 @@ const DEFAULT_USERS = ["test", "main"];
         const record = records.find((item) => item.date === loadDate);
         fillForm(record);
         renderAnalysis(record);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        setActiveTab("record");
       }
       if (deleteDate && confirm(`删除 ${deleteDate} 的记录？`)) {
         const deletedIndex = records.findIndex((item) => item.date === deleteDate);

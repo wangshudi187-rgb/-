@@ -115,7 +115,7 @@
       gap: 8px;
     }
 
-    .quick-nav {
+    .tab-nav {
       display: flex;
       gap: 8px;
       margin: -4px 0 16px;
@@ -123,7 +123,7 @@
       padding-bottom: 2px;
     }
 
-    .quick-nav button {
+    .tab-nav button {
       min-height: 34px;
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -135,15 +135,33 @@
       white-space: nowrap;
     }
 
-    .quick-nav button:active {
+    .tab-nav button:active,
+    .tab-nav button.active {
       background: var(--soft);
+      border-color: #a8a8a2;
+      font-weight: 750;
     }
 
     .layout {
+      display: block;
+    }
+
+    .app.view-record .layout {
       display: grid;
-      grid-template-columns: 420px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 520px);
       gap: 16px;
       align-items: start;
+    }
+
+    [data-view-panel] {
+      display: none;
+    }
+
+    .app.view-record [data-view-panel="record"],
+    .app.view-advice [data-view-panel="advice"],
+    .app.view-trend [data-view-panel="trend"],
+    .app.view-data [data-view-panel="data"] {
+      display: block;
     }
 
     .stack {
@@ -759,6 +777,7 @@
       .app {
         width: min(100% - 20px, 1280px);
         padding-top: 16px;
+        padding-bottom: 86px;
       }
 
       .topbar {
@@ -784,6 +803,26 @@
       .advice-item {
         grid-template-columns: 1fr;
         gap: 4px;
+      }
+
+      .tab-nav {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        z-index: 15;
+        margin: 0;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: var(--shadow);
+        justify-content: space-between;
+      }
+
+      .tab-nav button {
+        flex: 1;
+        padding: 7px 8px;
       }
 
       .input-title-actions {
