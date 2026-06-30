@@ -59,6 +59,56 @@ const DEFAULT_USERS = ["test", "main"];
       return Number.isFinite(number) ? number : null;
     }
 
+    function formatFixed(value, digits = 2) {
+      return Number(value).toFixed(digits);
+    }
+
+    function populatePicker(select, options, formatter = (value) => String(value)) {
+      select.innerHTML = options.map((value) => {
+        const formatted = formatter(value);
+        return `<option value="${formatted}">${formatted}</option>`;
+      }).join("");
+    }
+
+    function populateNumericPickers() {
+      const weights = [];
+      for (let value = 40; value <= 150.0001; value += 0.1) {
+        weights.push(value);
+      }
+      populatePicker(fields.weight, weights, (value) => formatFixed(value, 2));
+
+      const cardioMinutes = [];
+      for (let value = 0; value <= 300; value += 5) {
+        cardioMinutes.push(value);
+      }
+      populatePicker(fields.cardio, cardioMinutes, (value) => String(value));
+    }
+
+    function nearestOptionValue(select, value) {
+      const numeric = toNumber(value);
+      if (numeric === null) return select.options[0]?.value || "";
+      let nearest = select.options[0]?.value || "";
+      let distance = Infinity;
+      for (const option of select.options) {
+        const optionValue = Number(option.value);
+        const optionDistance = Math.abs(optionValue - numeric);
+        if (optionDistance < distance) {
+          nearest = option.value;
+          distance = optionDistance;
+        }
+      }
+      return nearest;
+    }
+
+    function setPickerValue(select, value, fallback) {
+      select.value = nearestOptionValue(select, value ?? fallback);
+    }
+
+    function defaultWeightValue() {
+      const latest = latestRecord();
+      return latest && latest.weight !== null ? latest.weight : 70;
+    }
+
     function userDataKey(userId = currentUser) {
       return `user_${userId}_data`;
     }
@@ -243,14 +293,14 @@ const DEFAULT_USERS = ["test", "main"];
     function fillForm(record) {
       if (!record) return;
       fields.date.value = record.date || todayString();
-      fields.weight.value = record.weight ?? "";
+      setPickerValue(fields.weight, record.weight, defaultWeightValue());
       fields.waist.value = record.waist ?? "";
       fields.steps.value = record.steps ?? "";
       fields.neck.value = record.neck ?? "";
       fields.hip.value = record.hip ?? "";
       fields.thigh.value = record.thigh ?? "";
       fields.arm.value = record.arm ?? "";
-      fields.cardio.value = record.cardio ?? 0;
+      setPickerValue(fields.cardio, record.cardio, 0);
       fields.strength.checked = Boolean(record.strength);
       fields.trainingType.value = record.trainingType || "力量";
       fields.dietControlled.value = record.dietControlled || "yes";
@@ -688,6 +738,7 @@ const DEFAULT_USERS = ["test", "main"];
     }
 
     function initializeForm() {
+      populateNumericPickers();
       fields.date.value = todayString();
       $("#startWeight").value = settings.startWeight ?? "";
       $("#targetWeight").value = settings.targetWeight ?? "";
@@ -696,12 +747,13 @@ const DEFAULT_USERS = ["test", "main"];
       if (today) {
         fillForm(today);
       } else {
+        setPickerValue(fields.weight, defaultWeightValue(), 70);
         fields.steps.value = "";
         fields.neck.value = "";
         fields.hip.value = "";
         fields.thigh.value = "";
         fields.arm.value = "";
-        fields.cardio.value = 0;
+        setPickerValue(fields.cardio, 0, 0);
       }
     }
 
