@@ -41,6 +41,7 @@ const DEFAULT_USERS = ["test", "main"];
     let backupDirectoryHandle = null;
     let appInitialized = false;
     let steppersInitialized = false;
+    let lastDeletedRecord = null;
 
     function todayString() {
       const now = new Date();
@@ -117,8 +118,40 @@ const DEFAULT_USERS = ["test", "main"];
       document.querySelectorAll(".stepper").forEach((stepper) => {
         const target = stepper.dataset.target;
         stepper.querySelectorAll("[data-step-action]").forEach((button) => {
+          let holdDelay = null;
+          let holdInterval = null;
+          let didHold = false;
+          const direction = button.dataset.stepAction === "increase" ? 1 : -1;
+
+          const stopHold = () => {
+            window.clearTimeout(holdDelay);
+            window.clearInterval(holdInterval);
+            holdDelay = null;
+            holdInterval = null;
+          };
+
+          button.addEventListener("pointerdown", (event) => {
+            if (event.button !== undefined && event.button !== 0) return;
+            didHold = false;
+            stopHold();
+            holdDelay = window.setTimeout(() => {
+              didHold = true;
+              changeStepperValue(target, direction);
+              holdInterval = window.setInterval(() => {
+                changeStepperValue(target, direction);
+              }, 110);
+            }, 350);
+          });
+
+          button.addEventListener("pointerup", stopHold);
+          button.addEventListener("pointercancel", stopHold);
+          button.addEventListener("pointerleave", stopHold);
+          button.addEventListener("lostpointercapture", stopHold);
           button.addEventListener("click", () => {
-            const direction = button.dataset.stepAction === "increase" ? 1 : -1;
+            if (didHold) {
+              didHold = false;
+              return;
+            }
             changeStepperValue(target, direction);
           });
         });
@@ -127,6 +160,14 @@ const DEFAULT_USERS = ["test", "main"];
       document.querySelectorAll("[data-manual-for]").forEach((input) => {
         input.addEventListener("change", () => {
           setStepperValue(input.dataset.manualFor, input.value, input.value);
+        });
+      });
+
+      document.querySelectorAll("[data-quick-for]").forEach((group) => {
+        group.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-quick-value]");
+          if (!button) return;
+          setStepperValue(group.dataset.quickFor, button.dataset.quickValue, button.dataset.quickValue);
         });
       });
       steppersInitialized = true;
@@ -353,7 +394,7 @@ const DEFAULT_USERS = ["test", "main"];
       fields.dietControlled.value = previous.dietControlled || "yes";
       const carb = document.querySelector(`input[name='carbLevel'][value='${previous.carbLevel || "低"}']`);
       if (carb) carb.checked = true;
-      toast("已复制最近一条记录，日期保持今天。");
+      toast("已沿用上次数据，日期保持今天。");
     }
 
     function upsertRecord(record) {
@@ -388,7 +429,7 @@ const DEFAULT_USERS = ["test", "main"];
       const recent = sortedRecords()
         .filter((item) => item.date <= throughDate && item.weight !== null)
         .slice(-days);
-      if (!recent.length) return null;
+      if (recent.length < days) return null;
       return recent.reduce((sum, item) => sum + item.weight, 0) / recent.length;
     }
 
@@ -405,6 +446,7 @@ const DEFAULT_USERS = ["test", "main"];
 
       const plateau = isPlateau(record);
       const waistImproving = isWaistImproving(record);
+      const weightRecordCount = sortedRecords().filter((item) => item.date <= record.date && item.weight !== null).length;
       const avg3 = averageWeight(3, record.date);
       const avg7 = averageWeight(7, record.date);
       const last3 = recentRecords(3, record.date);
@@ -464,8 +506,16 @@ const DEFAULT_USERS = ["test", "main"];
       ].join(" ");
 
       const trendMessages = [];
-      if (avg3 !== null) trendMessages.push(`3日均重 ${avg3.toFixed(1)}kg`);
-      if (avg7 !== null) trendMessages.push(`7日均重 ${avg7.toFixed(1)}kg`);
+      if (weightRecordCount < 3) {
+        trendMessages.push("记录不足 3 条，先积累数据。");
+      } else if (avg3 !== null) {
+        trendMessages.push(`3日均重 ${avg3.toFixed(1)}kg`);
+      }
+      if (weightRecordCount < 7) {
+        trendMessages.push("7 日趋势需要更多记录。");
+      } else if (avg7 !== null) {
+        trendMessages.push(`7日均重 ${avg7.toFixed(1)}kg`);
+      }
       if (plateau && waistImproving) {
         trendMessages.push("体重不降但腰围下降，可能仍在减脂，不必只看体重。");
       }
@@ -476,7 +526,7 @@ const DEFAULT_USERS = ["test", "main"];
         trendMessages.push("最近多日有氧偏高，注意恢复。");
       }
       if (!trendMessages.length) {
-        trendMessages.push("继续看均值趋势，别被单日波动带节奏。");
+        trendMessages.push("继续看均值趋势，避免对单日体重波动作强结论。");
       }
 
       return {
@@ -831,6 +881,58 @@ const DEFAULT_USERS = ["test", "main"];
       `).join("");
     }
 
+    function renderTodayActions(record) {
+      const container = $("#todayActions");
+      if (!record) {
+        container.innerHTML = `<div class="action-item">保存记录后生成今日行动。</div>`;
+        return;
+      }
+
+      const highTrainingLoad = (record.cardio ?? 0) > 90 || (record.trainingType === "HIIT" && (record.cardio ?? 0) >= 45);
+      const actions = [
+        "今日步数目标：≥ 8000",
+        highTrainingLoad ? "今日有氧建议：轻松走 20-30 分钟" : "今日有氧建议：Zone2 30-45 分钟",
+        highTrainingLoad ? "今日训练：建议恢复" : "今日训练：适合力量",
+        record.dietControlled === "yes" ? "今日饮食：保持正常控制，不做极端补偿" : "今日饮食：回到正常控制，不做极端补偿"
+      ];
+
+      container.innerHTML = actions.map((action) => `<div class="action-item">${action}</div>`).join("");
+    }
+
+    function renderWeeklySummary() {
+      const recent = getWindowRecords(7);
+      const weightItems = recent.filter((item) => item.weight !== null);
+      const stepItems = recent.filter((item) => item.steps !== null);
+      const recordDays = recent.length;
+      const avgWeight = weightItems.length
+        ? weightItems.reduce((sum, item) => sum + item.weight, 0) / weightItems.length
+        : null;
+      const avgSteps = stepItems.length
+        ? stepItems.reduce((sum, item) => sum + item.steps, 0) / stepItems.length
+        : null;
+      const cardioTotal = recent.reduce((sum, item) => sum + (item.cardio ?? 0), 0);
+      const strengthCount = recent.filter((item) => item.strength).length;
+      const dietDays = recent.filter((item) => item.dietControlled === "yes").length;
+
+      $("#weeklyRecordDays").textContent = String(recordDays);
+      $("#weeklyAvgWeight").textContent = avgWeight === null ? "--" : avgWeight.toFixed(1);
+      $("#weeklyAvgSteps").textContent = avgSteps === null ? "--" : Math.round(avgSteps).toString();
+      $("#weeklyCardioTotal").textContent = String(cardioTotal);
+      $("#weeklyStrengthCount").textContent = String(strengthCount);
+      $("#weeklyDietDays").textContent = String(dietDays);
+
+      if (recordDays < 3) {
+        $("#weeklySummaryText").textContent = "本周数据不足，先继续积累记录。";
+      } else if ((avgSteps ?? 0) >= 8000 && dietDays >= Math.max(1, recordDays - 1)) {
+        $("#weeklySummaryText").textContent = "本周执行稳定，继续保持步数和饮食控制。";
+      } else if ((avgSteps ?? 0) < 8000) {
+        $("#weeklySummaryText").textContent = "本周日常活动偏少，优先把平均步数拉到 8000 以上。";
+      } else {
+        $("#weeklySummaryText").textContent = "本周已有基础记录，继续看体重和腰围趋势。";
+      }
+      $("#weeklySummaryHint").textContent = recordDays ? `最近 ${recordDays} 天` : "最近 7 天";
+    }
+
     function renderAll(preferredRecord) {
       const record = preferredRecord || getCurrentRecord();
       if (record) {
@@ -842,20 +944,33 @@ const DEFAULT_USERS = ["test", "main"];
       renderProgress();
       renderLossBreakdown();
       renderHistory();
+      renderTodayActions(record);
+      renderWeeklySummary();
     }
 
-    function toast(message) {
+    function toast(message, action) {
       const el = $("#toast");
       el.textContent = message;
+      if (action) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "toast-action";
+        button.textContent = action.label;
+        button.addEventListener("click", () => {
+          action.onClick();
+          el.classList.remove("show");
+        }, { once: true });
+        el.appendChild(button);
+      }
       el.classList.add("show");
       window.clearTimeout(toast.timer);
-      toast.timer = window.setTimeout(() => el.classList.remove("show"), 2200);
+      toast.timer = window.setTimeout(() => el.classList.remove("show"), action ? 5200 : 2200);
     }
 
     function initializeForm() {
       fields.date.value = todayString();
-      $("#startWeight").value = settings.startWeight ?? "";
-      $("#targetWeight").value = settings.targetWeight ?? "";
+      setStepperValue("startWeight", settings.startWeight ?? defaultWeightValue(), defaultWeightValue());
+      setStepperValue("targetWeight", settings.targetWeight ?? Math.max(20, defaultWeightValue() - 5), 70);
       $("#targetDate").value = settings.targetDate ?? "";
       const today = records.find((item) => item.date === fields.date.value);
       if (today) {
@@ -878,7 +993,7 @@ const DEFAULT_USERS = ["test", "main"];
       upsertRecord(record);
       if (!settings.startWeight) {
         settings.startWeight = record.weight;
-        $("#startWeight").value = record.weight;
+        setStepperValue("startWeight", record.weight, record.weight);
         saveSettings();
       }
       renderAll(record);
@@ -931,6 +1046,13 @@ const DEFAULT_USERS = ["test", "main"];
       switchUser(event.target.value);
     });
 
+    document.querySelector(".quick-nav").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-scroll-target]");
+      if (!button) return;
+      const target = document.getElementById(button.dataset.scrollTarget);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     $("#range7").addEventListener("click", () => {
       chartRange = 7;
       $("#range7").classList.add("active");
@@ -955,10 +1077,26 @@ const DEFAULT_USERS = ["test", "main"];
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
       if (deleteDate && confirm(`删除 ${deleteDate} 的记录？`)) {
+        const deletedIndex = records.findIndex((item) => item.date === deleteDate);
+        const deletedRecord = records[deletedIndex];
+        lastDeletedRecord = deletedRecord ? { record: deletedRecord, index: deletedIndex } : null;
         records = records.filter((item) => item.date !== deleteDate);
         saveRecords();
         renderAll();
-        toast("记录已删除。");
+        toast("记录已删除。", {
+          label: "撤销",
+          onClick: () => {
+            if (!lastDeletedRecord) return;
+            const exists = records.some((item) => item.date === lastDeletedRecord.record.date);
+            if (!exists) {
+              records.splice(Math.min(lastDeletedRecord.index, records.length), 0, lastDeletedRecord.record);
+              saveRecords();
+              renderAll(lastDeletedRecord.record);
+              toast("已撤销删除。");
+            }
+            lastDeletedRecord = null;
+          }
+        });
       }
     }
 
@@ -983,25 +1121,87 @@ const DEFAULT_USERS = ["test", "main"];
 
     $("#importBtn").addEventListener("click", () => $("#importFile").click());
 
+    function importedRecordsFromPayload(imported) {
+      if (Array.isArray(imported)) return imported;
+      if (Array.isArray(imported.data)) return imported.data;
+      if (Array.isArray(imported.records)) return imported.records;
+      return [];
+    }
+
+    function recordUpdatedTime(record) {
+      const time = Date.parse(record.updatedAt || "");
+      return Number.isFinite(time) ? time : null;
+    }
+
+    function mergeImportedRecords(importedList) {
+      const byDate = new Map(records.map((record) => [record.date, record]));
+      let added = 0;
+      let replaced = 0;
+      let kept = 0;
+      let unresolved = 0;
+      let replaceUnresolved = false;
+
+      const conflictsWithoutTime = importedList.filter((record) => {
+        if (!record.date || !byDate.has(record.date)) return false;
+        const localTime = recordUpdatedTime(byDate.get(record.date));
+        const importedTime = recordUpdatedTime(record);
+        return localTime === null || importedTime === null;
+      });
+
+      if (conflictsWithoutTime.length) {
+        unresolved = conflictsWithoutTime.length;
+        replaceUnresolved = confirm(`导入数据中有 ${unresolved} 条同日期记录无法判断更新时间。是否用导入记录替换本地记录？取消则保留本地记录。`);
+      }
+
+      importedList.forEach((rawRecord) => {
+        if (!rawRecord || !rawRecord.date) return;
+        const record = { ...rawRecord, user: currentUser };
+        const localRecord = byDate.get(record.date);
+        if (!localRecord) {
+          byDate.set(record.date, record);
+          added += 1;
+          return;
+        }
+
+        const localTime = recordUpdatedTime(localRecord);
+        const importedTime = recordUpdatedTime(record);
+        if (localTime !== null && importedTime !== null) {
+          if (importedTime >= localTime) {
+            byDate.set(record.date, record);
+            replaced += 1;
+          } else {
+            kept += 1;
+          }
+          return;
+        }
+
+        if (replaceUnresolved) {
+          byDate.set(record.date, record);
+          replaced += 1;
+        } else {
+          kept += 1;
+        }
+      });
+
+      records = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+      return { added, replaced, kept, unresolved };
+    }
+
     $("#importFile").addEventListener("change", async (event) => {
       const file = event.target.files[0];
       if (!file) return;
       try {
         const imported = JSON.parse(await file.text());
-        records = Array.isArray(imported)
-          ? imported
-          : Array.isArray(imported.data)
-            ? imported.data
-            : Array.isArray(imported.records)
-              ? imported.records
-              : records;
-        records = records.map((record) => ({ ...record, user: currentUser }));
-        settings = imported.settings && typeof imported.settings === "object" ? imported.settings : settings;
+        const importedList = importedRecordsFromPayload(imported);
+        const result = mergeImportedRecords(importedList);
+        if (imported.settings && typeof imported.settings === "object" && confirm("是否同时导入目标设置？")) {
+          settings = imported.settings;
+        }
         saveRecords();
         saveSettings();
         initializeForm();
         renderAll();
-        toast("数据已导入。");
+        toast(`导入完成：新增 ${result.added}，更新 ${result.replaced}，保留 ${result.kept}。`);
       } catch {
         toast("导入失败，请检查 JSON 文件。");
       } finally {

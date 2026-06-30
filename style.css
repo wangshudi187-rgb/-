@@ -59,6 +59,12 @@
       font-weight: 650;
     }
 
+    .auth-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .user-switcher {
       display: grid;
       gap: 4px;
@@ -107,6 +113,30 @@
       flex-wrap: wrap;
       justify-content: flex-end;
       gap: 8px;
+    }
+
+    .quick-nav {
+      display: flex;
+      gap: 8px;
+      margin: -4px 0 16px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .quick-nav button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .quick-nav button:active {
+      background: var(--soft);
     }
 
     .layout {
@@ -359,6 +389,29 @@
       margin-top: 6px;
     }
 
+    .quick-values {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .quick-values button {
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .quick-values button:active {
+      background: var(--soft);
+    }
+
     .more-measures {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -467,6 +520,31 @@
     }
 
     .advice-text {
+      font-size: 14px;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-item {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    .weekly-summary {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 12px;
       font-size: 14px;
     }
 
@@ -652,6 +730,18 @@
     .toast.show {
       opacity: 1;
       transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast-action {
+      margin-left: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 7px;
+      background: transparent;
+      color: #fff;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
     }
 
     @media (max-width: 1080px) {

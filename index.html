@@ -14,6 +14,7 @@
       <div>
         <h1>AI 减脂进度追踪</h1>
         <p class="subtitle">请输入访问密码</p>
+        <p class="auth-note">本地密码仅用于防误入，不等于云端账号保护。</p>
       </div>
       <div class="field">
         <label for="passwordInput">Password</label>
@@ -36,7 +37,7 @@
     <header class="topbar">
       <div>
         <h1>AI 减脂进度追踪</h1>
-        <p class="subtitle">每日记录，长期看趋势。所有数据只保存在当前浏览器。</p>
+        <p class="subtitle">数据默认保存在当前浏览器；导出或备份文件请自行保管。</p>
       </div>
       <div class="actions">
         <div class="user-switcher">
@@ -54,13 +55,20 @@
       </div>
     </header>
 
+    <nav class="quick-nav" aria-label="页面快捷导航">
+      <button type="button" data-scroll-target="entryForm">记录</button>
+      <button type="button" data-scroll-target="analysisSection">分析</button>
+      <button type="button" data-scroll-target="chartsSection">图表</button>
+      <button type="button" data-scroll-target="historySection">历史</button>
+    </nav>
+
     <section class="layout">
       <div class="stack">
         <form class="card" id="entryForm">
           <div class="section-title">
             <h2>输入区</h2>
             <div class="input-title-actions">
-              <button class="btn small" id="copyPreviousBtn" type="button">复制昨日数据</button>
+              <button class="btn small" id="copyPreviousBtn" type="button">沿用上次数据</button>
               <span class="hint" id="backupStatus">本地保存，备份未设置</span>
             </div>
           </div>
@@ -110,6 +118,13 @@
                 <summary>手动输入</summary>
                 <input type="number" inputmode="numeric" min="0" max="100000" step="1" data-manual-for="steps" />
               </details>
+              <div class="quick-values" data-quick-for="steps">
+                <button type="button" data-quick-value="6000">6000</button>
+                <button type="button" data-quick-value="8000">8000</button>
+                <button type="button" data-quick-value="10000">10000</button>
+                <button type="button" data-quick-value="12000">12000</button>
+                <button type="button" data-quick-value="15000">15000</button>
+              </div>
             </div>
             <div class="field">
               <label for="cardio">昨日有氧分钟</label>
@@ -123,6 +138,14 @@
                 <summary>手动输入</summary>
                 <input type="number" inputmode="numeric" min="0" max="300" step="1" data-manual-for="cardio" />
               </details>
+              <div class="quick-values" data-quick-for="cardio">
+                <button type="button" data-quick-value="0">0</button>
+                <button type="button" data-quick-value="20">20</button>
+                <button type="button" data-quick-value="30">30</button>
+                <button type="button" data-quick-value="45">45</button>
+                <button type="button" data-quick-value="60">60</button>
+                <button type="button" data-quick-value="90">90</button>
+              </div>
             </div>
             <div class="field full">
               <label>昨日力量训练</label>
@@ -224,11 +247,29 @@
           <div class="grid">
             <div class="field">
               <label for="startWeight">起始体重 kg</label>
-              <input id="startWeight" type="number" min="20" max="300" step="0.1" />
+              <input id="startWeight" type="hidden" />
+              <div class="stepper" data-target="startWeight" data-step="0.1" data-min="20" data-max="300" data-decimals="1" data-unit="kg">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>80.0</strong><span>kg</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="decimal" min="20" max="300" step="0.01" data-manual-for="startWeight" />
+              </details>
             </div>
             <div class="field">
               <label for="targetWeight">目标体重 kg</label>
-              <input id="targetWeight" type="number" min="20" max="300" step="0.1" />
+              <input id="targetWeight" type="hidden" />
+              <div class="stepper" data-target="targetWeight" data-step="0.1" data-min="20" data-max="300" data-decimals="1" data-unit="kg">
+                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                <div class="stepper-display"><strong data-stepper-value>70.0</strong><span>kg</span></div>
+                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              </div>
+              <details class="manual-entry">
+                <summary>手动输入</summary>
+                <input type="number" inputmode="decimal" min="20" max="300" step="0.01" data-manual-for="targetWeight" />
+              </details>
             </div>
             <div class="field full">
               <label for="targetDate">目标日期</label>
@@ -240,7 +281,7 @@
       </div>
 
       <div class="stack">
-        <section class="card">
+        <section class="card" id="analysisSection">
           <div class="section-title">
             <h2>输出区</h2>
             <span id="analysisDate" class="hint">等待今日记录</span>
@@ -301,6 +342,56 @@
 
         <section class="card">
           <div class="section-title">
+            <h2>今日行动</h2>
+            <span class="hint">直接执行</span>
+          </div>
+          <div class="action-list" id="todayActions">
+            <div class="action-item">保存记录后生成今日行动。</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>本周总结</h2>
+            <span id="weeklySummaryHint" class="hint">最近 7 天</span>
+          </div>
+          <div class="metric-grid weekly-grid">
+            <div class="metric">
+              <div class="name">记录天数</div>
+              <div id="weeklyRecordDays" class="value">--</div>
+              <div class="note">天</div>
+            </div>
+            <div class="metric">
+              <div class="name">平均体重</div>
+              <div id="weeklyAvgWeight" class="value">--</div>
+              <div class="note">kg</div>
+            </div>
+            <div class="metric">
+              <div class="name">平均步数</div>
+              <div id="weeklyAvgSteps" class="value">--</div>
+              <div class="note">steps</div>
+            </div>
+            <div class="metric">
+              <div class="name">有氧总量</div>
+              <div id="weeklyCardioTotal" class="value">--</div>
+              <div class="note">min</div>
+            </div>
+            <div class="metric">
+              <div class="name">力量训练</div>
+              <div id="weeklyStrengthCount" class="value">--</div>
+              <div class="note">次</div>
+            </div>
+            <div class="metric">
+              <div class="name">控制饮食</div>
+              <div id="weeklyDietDays" class="value">--</div>
+              <div class="note">天</div>
+            </div>
+          </div>
+          <div class="weekly-summary" id="weeklySummaryText">继续积累记录。</div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
             <h2>减重拆解</h2>
             <span id="lossHint" class="hint">按体重记录自动计算</span>
           </div>
@@ -338,7 +429,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="chartsSection">
           <div class="section-title">
             <h2>目标进度</h2>
             <span id="progressHint" class="hint">需要至少 2 条体重记录</span>
@@ -376,7 +467,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="historySection">
           <div class="chart-toolbar">
             <div class="section-title" style="margin: 0;">
               <h2>图表区</h2>
