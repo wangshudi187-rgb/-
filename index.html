@@ -37,7 +37,7 @@
     <header class="topbar">
       <div>
         <h1>AI 减脂进度追踪</h1>
-        <p class="subtitle">数据默认保存在当前浏览器；导出或备份文件请自行保管。</p>
+        <p class="subtitle">数据默认保存在当前浏览器；导出或备份文件请自行保管。本工具使用斤作为体重单位。</p>
       </div>
     </header>
 
@@ -46,6 +46,7 @@
       <button type="button" data-tab="advice">建议</button>
       <button type="button" data-tab="trend">趋势</button>
       <button type="button" data-tab="data">数据</button>
+      <button type="button" data-tab="ai">AI</button>
     </nav>
 
     <section class="layout">
@@ -66,17 +67,18 @@
               <input id="date" name="date" type="date" required />
             </div>
             <div class="field">
-              <label for="weight">体重 kg</label>
+              <label for="weight">体重 斤</label>
               <input id="weight" name="weight" type="hidden" required />
-              <div class="stepper" data-target="weight" data-step="0.1" data-min="40" data-max="150" data-decimals="1" data-unit="kg">
+              <div class="stepper" data-target="weight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
                 <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                <div class="stepper-display"><strong data-stepper-value>70.0</strong><span>kg</span></div>
+                <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
                 <button class="stepper-btn" type="button" data-step-action="increase">+</button>
               </div>
               <details class="manual-entry">
                 <summary>手动输入</summary>
-                <input type="number" inputmode="decimal" min="40" max="150" step="0.01" data-manual-for="weight" />
+                <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="weight" />
               </details>
+              <span class="hint">本工具使用斤作为体重单位。</span>
             </div>
             <div class="field">
               <label for="waist">腰围 cm</label>
@@ -151,9 +153,10 @@
               <label for="trainingType">有氧类型</label>
               <select id="trainingType" name="trainingType">
                 <option value="力量">力量</option>
-                <option value="Zone2">Zone2</option>
+                <option value="Zone2">低强度有氧（Zone2）</option>
                 <option value="HIIT">HIIT</option>
               </select>
+              <span class="hint">Zone2≈能说完整句子但不能唱歌的低强度有氧，如快走、椭圆机、慢骑。</span>
             </div>
             <details class="more-measures field full">
               <summary>饮食记录</summary>
@@ -244,29 +247,29 @@
           </div>
           <div class="grid">
             <div class="field">
-              <label for="startWeight">起始体重 kg</label>
+              <label for="startWeight">起始体重 斤</label>
               <input id="startWeight" type="hidden" />
-              <div class="stepper" data-target="startWeight" data-step="0.1" data-min="20" data-max="300" data-decimals="1" data-unit="kg">
+              <div class="stepper" data-target="startWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
                 <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                <div class="stepper-display"><strong data-stepper-value>80.0</strong><span>kg</span></div>
+                <div class="stepper-display"><strong data-stepper-value>160.0</strong><span>斤</span></div>
                 <button class="stepper-btn" type="button" data-step-action="increase">+</button>
               </div>
               <details class="manual-entry">
                 <summary>手动输入</summary>
-                <input type="number" inputmode="decimal" min="20" max="300" step="0.01" data-manual-for="startWeight" />
+                <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="startWeight" />
               </details>
             </div>
             <div class="field">
-              <label for="targetWeight">目标体重 kg</label>
+              <label for="targetWeight">目标体重 斤</label>
               <input id="targetWeight" type="hidden" />
-              <div class="stepper" data-target="targetWeight" data-step="0.1" data-min="20" data-max="300" data-decimals="1" data-unit="kg">
+              <div class="stepper" data-target="targetWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
                 <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                <div class="stepper-display"><strong data-stepper-value>70.0</strong><span>kg</span></div>
+                <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
                 <button class="stepper-btn" type="button" data-step-action="increase">+</button>
               </div>
               <details class="manual-entry">
                 <summary>手动输入</summary>
-                <input type="number" inputmode="decimal" min="20" max="300" step="0.01" data-manual-for="targetWeight" />
+                <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="targetWeight" />
               </details>
             </div>
             <div class="field full">
@@ -329,12 +332,12 @@
             <div class="metric">
               <div class="name">3日均重</div>
               <div id="avg3Weight" class="value">--</div>
-              <div class="note">kg</div>
+              <div class="note">斤</div>
             </div>
             <div class="metric">
               <div class="name">7日均重</div>
               <div id="avg7Weight" class="value">--</div>
-              <div class="note">kg</div>
+              <div class="note">斤</div>
             </div>
           </div>
 
@@ -382,7 +385,7 @@
             <div class="metric">
               <div class="name">平均体重</div>
               <div id="weeklyAvgWeight" class="value">--</div>
-              <div class="note">kg</div>
+              <div class="note">斤</div>
             </div>
             <div class="metric">
               <div class="name">平均步数</div>
@@ -427,7 +430,7 @@
             <div class="metric">
               <div class="name">日均已减</div>
               <div id="avgDailyLoss" class="value">--</div>
-              <div class="note">kg / 天</div>
+              <div class="note">斤 / 天</div>
             </div>
             <div class="metric">
               <div class="name">还需减</div>
@@ -454,8 +457,8 @@
           </div>
           <div class="progress-wrap">
             <div class="progress-meta">
-              <span id="progressStart">当前 -- kg</span>
-              <span id="progressTarget">目标 -- kg</span>
+              <span id="progressStart">当前 -- 斤</span>
+              <span id="progressTarget">目标 -- 斤</span>
             </div>
             <div class="progress-track">
               <div class="progress-bar" id="progressBar"></div>
@@ -465,12 +468,12 @@
             <div class="metric">
               <div class="name">当前减脂速度</div>
               <div id="weeklySpeed" class="value">--</div>
-              <div class="note">kg / 周</div>
+              <div class="note">斤 / 周</div>
             </div>
             <div class="metric">
               <div class="name">距离目标</div>
               <div id="targetGap" class="value">--</div>
-              <div class="note">kg</div>
+              <div class="note">斤</div>
             </div>
             <div class="metric">
               <div class="name">预计达成</div>
@@ -511,7 +514,30 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" data-view-panel="ai">
+          <div class="section-title">
+            <h2>AI 复盘</h2>
+            <span class="hint">本页只在本地生成文本，不会自动上传数据。复制后请自行决定是否发送给 AI。</span>
+          </div>
+          <div class="ai-panel">
+            <div class="ai-note">
+              本功能只负责整理数据和生成 Prompt。复制后是否发送给 ChatGPT，由你自己决定。
+            </div>
+            <div class="ai-actions">
+              <button class="btn" type="button" data-ai-prompt="week">复制 7 天复盘</button>
+              <button class="btn" type="button" data-ai-prompt="month">复制 30 天复盘</button>
+              <button class="btn" type="button" data-ai-prompt="plateau">复制平台期排查</button>
+              <button class="btn" type="button" data-ai-prompt="training">复制今日训练建议</button>
+            </div>
+            <div class="ai-output hidden" id="aiPromptOutput">
+              <label for="aiPromptText">复制失败时可手动复制以下文本</label>
+              <textarea id="aiPromptText" readonly></textarea>
+              <button class="btn small" id="clearAiPromptBtn" type="button">清空文本</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" data-view-panel="data">
           <div class="section-title">
             <h2>历史记录</h2>
             <span class="hint">点击日期可载入编辑</span>

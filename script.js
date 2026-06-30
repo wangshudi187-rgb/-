@@ -2,6 +2,7 @@ const PASSWORD = "123456";
 const AUTH_KEY = "ai-fat-loss-tracker-authenticated-v1";
 const CURRENT_USER_KEY = "ai-fat-loss-tracker-current-user-v1";
 const DEFAULT_USERS = ["test", "main"];
+const WEIGHT_UNIT_VERSION = "jin";
     const BACKUP_DB = "ai-fat-loss-tracker-backup-db";
     const BACKUP_STORE = "handles";
     const BACKUP_HANDLE_KEY = "backup-directory";
@@ -70,7 +71,7 @@ const DEFAULT_USERS = ["test", "main"];
 
     function defaultWeightValue() {
       const latest = latestRecord();
-      return latest && latest.weight !== null ? latest.weight : 70;
+      return latest && latest.weight !== null ? latest.weight : 140;
     }
 
     function stepperConfig(target) {
@@ -94,9 +95,9 @@ const DEFAULT_USERS = ["test", "main"];
 
     function normalizeStepperValue(config, value, fallback = config.min) {
       const numeric = toNumber(value);
-      const base = numeric === null ? fallback : numeric;
-      const stepped = Math.round(base / config.step) * config.step;
-      return clamp(stepped, config.min, config.max);
+      const fallbackNumber = toNumber(fallback);
+      const base = numeric === null ? (fallbackNumber === null ? config.min : fallbackNumber) : numeric;
+      return clamp(base, config.min, config.max);
     }
 
     function setStepperValue(target, value, fallback) {
@@ -104,6 +105,19 @@ const DEFAULT_USERS = ["test", "main"];
       if (!config) return;
       const normalized = normalizeStepperValue(config, value, fallback);
       const formatted = normalized.toFixed(config.decimals);
+      config.input.value = formatted;
+      config.display.textContent = formatted;
+      if (config.manual) config.manual.value = formatted;
+    }
+
+    function setStepperManualValue(target, value, fallback) {
+      const config = stepperConfig(target);
+      if (!config) return;
+      const numeric = toNumber(value);
+      const fallbackNumber = toNumber(fallback);
+      const base = numeric === null ? (fallbackNumber === null ? config.min : fallbackNumber) : numeric;
+      const clamped = clamp(base, config.min, config.max);
+      const formatted = clamped.toFixed(config.decimals);
       config.input.value = formatted;
       config.display.textContent = formatted;
       if (config.manual) config.manual.value = formatted;
@@ -118,7 +132,7 @@ const DEFAULT_USERS = ["test", "main"];
 
     function setActiveTab(tab) {
       activeTab = tab;
-      appRoot.classList.remove("view-record", "view-advice", "view-trend", "view-data");
+      appRoot.classList.remove("view-record", "view-advice", "view-trend", "view-data", "view-ai");
       appRoot.classList.add(`view-${tab}`);
       document.querySelectorAll("[data-tab]").forEach((button) => {
         button.classList.toggle("active", button.dataset.tab === tab);
@@ -192,7 +206,7 @@ const DEFAULT_USERS = ["test", "main"];
 
       document.querySelectorAll("[data-manual-for]").forEach((input) => {
         input.addEventListener("change", () => {
-          setStepperValue(input.dataset.manualFor, input.value, input.value);
+          setStepperManualValue(input.dataset.manualFor, input.value, input.value);
         });
       });
 
@@ -212,6 +226,10 @@ const DEFAULT_USERS = ["test", "main"];
 
     function userSettingsKey(userId = currentUser) {
       return `user_${userId}_settings`;
+    }
+
+    function userWeightUnitKey(userId = currentUser) {
+      return `user_${userId}_weight_unit_version`;
     }
 
     function userDataEnvelope(data = records, userId = currentUser) {
@@ -249,6 +267,33 @@ const DEFAULT_USERS = ["test", "main"];
       localStorage.setItem(userSettingsKey(), JSON.stringify(settings));
     }
 
+    function convertWeightToJin(value) {
+      const number = toNumber(value);
+      return number === null ? value : Number((number * 2).toFixed(1));
+    }
+
+    function convertRecordWeightToJin(record) {
+      if (!record || typeof record !== "object" || record.weight === undefined) return record;
+      return { ...record, weight: convertWeightToJin(record.weight) };
+    }
+
+    function convertSettingsWeightToJin(source) {
+      if (!source || typeof source !== "object") return source;
+      const converted = { ...source };
+      if (converted.startWeight !== undefined) converted.startWeight = convertWeightToJin(converted.startWeight);
+      if (converted.targetWeight !== undefined) converted.targetWeight = convertWeightToJin(converted.targetWeight);
+      return converted;
+    }
+
+    function migrateWeightUnitForUser(userId = currentUser) {
+      if (localStorage.getItem(userWeightUnitKey(userId)) === WEIGHT_UNIT_VERSION) return;
+      const migratedRecords = loadRecords(userId).map(convertRecordWeightToJin);
+      const migratedSettings = convertSettingsWeightToJin(loadSettings(userId));
+      localStorage.setItem(userDataKey(userId), JSON.stringify(userDataEnvelope(migratedRecords, userId)));
+      localStorage.setItem(userSettingsKey(userId), JSON.stringify(migratedSettings || {}));
+      localStorage.setItem(userWeightUnitKey(userId), WEIGHT_UNIT_VERSION);
+    }
+
     function syncUserSelectors() {
       loginUserSelect.value = currentUser;
       userSelect.value = currentUser;
@@ -259,6 +304,7 @@ const DEFAULT_USERS = ["test", "main"];
       currentUser = userId;
       localStorage.setItem(CURRENT_USER_KEY, currentUser);
       syncUserSelectors();
+      migrateWeightUnitForUser();
       records = loadRecords();
       settings = loadSettings();
       initializeForm();
@@ -328,6 +374,8 @@ const DEFAULT_USERS = ["test", "main"];
       const payload = {
         type: "AI减脂进度追踪每日备份",
         backupPolicy: "append-only: create new file on each save; no read, delete, or edit of old backups",
+        weightUnitVersion: WEIGHT_UNIT_VERSION,
+        weightUnit: "斤",
         user: currentUser,
         backedUpAt: new Date().toISOString(),
         record
@@ -391,14 +439,14 @@ const DEFAULT_USERS = ["test", "main"];
     function fillForm(record) {
       if (!record) return;
       fields.date.value = record.date || todayString();
-      setStepperValue("weight", record.weight, defaultWeightValue());
-      setStepperValue("waist", record.waist, 80);
-      setStepperValue("steps", record.steps, 8000);
-      setStepperValue("neck", record.neck, 35);
-      setStepperValue("hip", record.hip, 95);
-      setStepperValue("thigh", record.thigh, 55);
-      setStepperValue("arm", record.arm, 30);
-      setStepperValue("cardio", record.cardio, 0);
+      setStepperManualValue("weight", record.weight, defaultWeightValue());
+      setStepperManualValue("waist", record.waist, 80);
+      setStepperManualValue("steps", record.steps, 8000);
+      setStepperManualValue("neck", record.neck, 35);
+      setStepperManualValue("hip", record.hip, 95);
+      setStepperManualValue("thigh", record.thigh, 55);
+      setStepperManualValue("arm", record.arm, 30);
+      setStepperManualValue("cardio", record.cardio, 0);
       hasCardio.value = (record.cardio ?? 0) > 0 ? "yes" : "no";
       fields.strength.checked = Boolean(record.strength);
       fields.trainingType.value = record.trainingType || "力量";
@@ -417,14 +465,14 @@ const DEFAULT_USERS = ["test", "main"];
       }
 
       fields.date.value = todayString();
-      setStepperValue("weight", previous.weight, defaultWeightValue());
-      setStepperValue("waist", previous.waist, 80);
-      setStepperValue("neck", previous.neck, 35);
-      setStepperValue("hip", previous.hip, 95);
-      setStepperValue("thigh", previous.thigh, 55);
-      setStepperValue("arm", previous.arm, 30);
-      setStepperValue("steps", previous.steps, 8000);
-      setStepperValue("cardio", previous.cardio, 0);
+      setStepperManualValue("weight", previous.weight, defaultWeightValue());
+      setStepperManualValue("waist", previous.waist, 80);
+      setStepperManualValue("neck", previous.neck, 35);
+      setStepperManualValue("hip", previous.hip, 95);
+      setStepperManualValue("thigh", previous.thigh, 55);
+      setStepperManualValue("arm", previous.arm, 30);
+      setStepperManualValue("steps", previous.steps, 8000);
+      setStepperManualValue("cardio", previous.cardio, 0);
       fields.strength.checked = Boolean(previous.strength);
       fields.trainingType.value = previous.trainingType || "力量";
       fields.dietControlled.value = previous.dietControlled || "yes";
@@ -515,9 +563,9 @@ const DEFAULT_USERS = ["test", "main"];
       }
 
       const trainOk = status !== "RECOVERY" && record.cardio <= 75;
-      let cardioAdvice = "建议 30-45 分钟 Zone2。";
+      let cardioAdvice = "建议 30-45 分钟低强度有氧（Zone2）。";
       if (status === "RECOVERY") cardioAdvice = "建议休息或 20-30 分钟轻松步行。";
-      if (status === "PLATEAU") cardioAdvice = "建议 45-60 分钟 Zone2，先不堆到 90 分钟以上。";
+      if (status === "PLATEAU") cardioAdvice = "建议 45-60 分钟低强度有氧（Zone2），先不堆到 90 分钟以上。";
       if (record.cardio > 90) cardioAdvice = "昨天有氧已偏高，今天控制在 45-60 分钟。";
 
       let carbAdvice = "今天不需要额外增加碳水。";
@@ -545,12 +593,12 @@ const DEFAULT_USERS = ["test", "main"];
       if (weightRecordCount < 3) {
         trendMessages.push("记录不足 3 条，先积累数据。");
       } else if (avg3 !== null) {
-        trendMessages.push(`3日均重 ${avg3.toFixed(1)}kg`);
+        trendMessages.push(`3日均重 ${avg3.toFixed(1)}斤`);
       }
       if (weightRecordCount < 7) {
         trendMessages.push("7 日趋势需要更多记录。");
       } else if (avg7 !== null) {
-        trendMessages.push(`7日均重 ${avg7.toFixed(1)}kg`);
+        trendMessages.push(`7日均重 ${avg7.toFixed(1)}斤`);
       }
       if (plateau && waistImproving) {
         trendMessages.push("体重不降但腰围下降，可能仍在减脂，不必只看体重。");
@@ -691,7 +739,7 @@ const DEFAULT_USERS = ["test", "main"];
 
     function renderCharts() {
       const windowed = getWindowRecords(chartRange);
-      weightChart = buildChart("#weightChart", weightChart, "体重 kg", windowed.map((item) => ({ date: item.date, value: item.weight })), "#171717");
+      weightChart = buildChart("#weightChart", weightChart, "体重 斤", windowed.map((item) => ({ date: item.date, value: item.weight })), "#171717");
       waistChart = buildChart("#waistChart", waistChart, "腰围 cm", windowed.map((item) => ({ date: item.date, value: item.waist })), "#6b6b65");
       stepsChart = buildChart("#stepsChart", stepsChart, "步数", windowed.map((item) => ({ date: item.date, value: item.steps })), "#3e3e3a");
     }
@@ -705,7 +753,7 @@ const DEFAULT_USERS = ["test", "main"];
       return Math.round((new Date(endDate + "T00:00:00") - new Date(startDate + "T00:00:00")) / dayMs);
     }
 
-    function kg(value) {
+    function jin(value) {
       return `${value.toFixed(1)}`;
     }
 
@@ -736,14 +784,14 @@ const DEFAULT_USERS = ["test", "main"];
 
       if (previous) {
         const dailyDrop = previous.weight - latest.weight;
-        $("#dailyDrop").textContent = dailyDrop > 0 ? kg(dailyDrop) : "0.0";
-        $("#dailyDropNote").textContent = dailyDrop >= 0 ? "kg，较昨天早上" : `比昨天增加 ${kg(Math.abs(dailyDrop))}kg`;
+        $("#dailyDrop").textContent = dailyDrop > 0 ? jin(dailyDrop) : "0.0";
+        $("#dailyDropNote").textContent = dailyDrop >= 0 ? "斤，较昨天早上" : `比昨天增加 ${jin(Math.abs(dailyDrop))}斤`;
       } else {
         $("#dailyDrop").textContent = "--";
         $("#dailyDropNote").textContent = "需要昨天记录";
       }
 
-      $("#totalLoss").textContent = totalLoss > 0 ? kg(totalLoss) : "0.0";
+      $("#totalLoss").textContent = totalLoss > 0 ? jin(totalLoss) : "0.0";
       $("#avgDailyLoss").textContent = avgDailyLoss > 0 ? avgDailyLoss.toFixed(2) : "0.00";
       $("#lossHint").textContent = `第一天 ${first.date}，最新 ${latest.date}`;
 
@@ -756,7 +804,7 @@ const DEFAULT_USERS = ["test", "main"];
       }
 
       const remaining = Math.max(0, latest.weight - target);
-      $("#remainingLoss").textContent = kg(remaining);
+      $("#remainingLoss").textContent = jin(remaining);
 
       if (!targetDate) {
         $("#dailyTask").textContent = "--";
@@ -773,7 +821,7 @@ const DEFAULT_USERS = ["test", "main"];
         $("#dailyTaskNote").textContent = "已到目标";
       } else if (left > 0) {
         $("#dailyTask").textContent = (remaining / left).toFixed(2);
-        $("#dailyTaskNote").textContent = "kg / 天";
+        $("#dailyTaskNote").textContent = "斤 / 天";
       } else {
         $("#dailyTask").textContent = "--";
         $("#dailyTaskNote").textContent = "目标日期已过";
@@ -789,8 +837,8 @@ const DEFAULT_USERS = ["test", "main"];
       const targetDate = settings.targetDate || "";
 
       if (!latest || !target || !start) {
-        $("#progressStart").textContent = "当前 -- kg";
-        $("#progressTarget").textContent = "目标 -- kg";
+        $("#progressStart").textContent = "当前 -- 斤";
+        $("#progressTarget").textContent = "目标 -- 斤";
         $("#progressBar").style.width = "0%";
         $("#weeklySpeed").textContent = "--";
         $("#targetGap").textContent = "--";
@@ -816,8 +864,8 @@ const DEFAULT_USERS = ["test", "main"];
         speed = ((startRecent.weight - endRecent.weight) / days) * 7;
       }
 
-      $("#progressStart").textContent = `当前 ${latest.weight.toFixed(1)} kg`;
-      $("#progressTarget").textContent = `目标 ${target.toFixed(1)} kg`;
+      $("#progressStart").textContent = `当前 ${latest.weight.toFixed(1)} 斤`;
+      $("#progressTarget").textContent = `目标 ${target.toFixed(1)} 斤`;
       $("#progressBar").style.width = `${percent}%`;
       $("#targetGap").textContent = gap.toFixed(1);
       $("#progressHint").textContent = `已完成 ${percent}%`;
@@ -868,9 +916,9 @@ const DEFAULT_USERS = ["test", "main"];
 
       const requiredWeekly = (gap / daysLeft) * 7;
       if (speed !== null && speed >= requiredWeekly) {
-        $("#targetPlanNote").textContent = `节奏可达，还需 ${requiredWeekly.toFixed(2)}kg/周`;
+        $("#targetPlanNote").textContent = `节奏可达，还需 ${requiredWeekly.toFixed(2)}斤/周`;
       } else {
-        $("#targetPlanNote").textContent = `需约 ${requiredWeekly.toFixed(2)}kg/周`;
+        $("#targetPlanNote").textContent = `需约 ${requiredWeekly.toFixed(2)}斤/周`;
       }
     }
 
@@ -904,7 +952,7 @@ const DEFAULT_USERS = ["test", "main"];
             <span class="status-pill">${item.strength ? "力量" : item.trainingType || "--"}</span>
           </div>
           <div class="history-card-grid">
-            <div>体重<strong>${item.weight ?? "--"} kg</strong></div>
+            <div>体重<strong>${item.weight ?? "--"} 斤</strong></div>
             <div>腰围<strong>${item.waist ?? "--"} cm</strong></div>
             <div>步数<strong>${item.steps ?? "--"}</strong></div>
             <div>有氧<strong>${item.cardio ?? "--"} min</strong></div>
@@ -927,7 +975,7 @@ const DEFAULT_USERS = ["test", "main"];
       const highTrainingLoad = (record.cardio ?? 0) > 90 || (record.trainingType === "HIIT" && (record.cardio ?? 0) >= 45);
       const actions = [
         "今日步数目标：≥ 8000",
-        highTrainingLoad ? "今日有氧建议：轻松走 20-30 分钟" : "今日有氧建议：Zone2 30-45 分钟",
+        highTrainingLoad ? "今日有氧建议：轻松走 20-30 分钟" : "今日有氧建议：低强度有氧（Zone2）30-45 分钟",
         highTrainingLoad ? "今日训练：建议恢复" : "今日训练：适合力量",
         record.dietControlled === "yes" ? "今日饮食：保持正常控制，不做极端补偿" : "今日饮食：回到正常控制，不做极端补偿"
       ];
@@ -969,6 +1017,149 @@ const DEFAULT_USERS = ["test", "main"];
       $("#weeklySummaryHint").textContent = recordDays ? `最近 ${recordDays} 天` : "最近 7 天";
     }
 
+    function getRecentRecordsForAi(days) {
+      const sorted = sortedRecords();
+      if (!sorted.length) return [];
+      const windowed = getWindowRecords(days);
+      return windowed.length ? windowed : sorted.slice(-days);
+    }
+
+    function formatPromptNumber(value, digits = 1, unit = "") {
+      const number = toNumber(value);
+      return number === null ? "未记录" : `${number.toFixed(digits)}${unit}`;
+    }
+
+    function formatPromptInteger(value, unit = "") {
+      const number = toNumber(value);
+      return number === null ? "未记录" : `${Math.round(number)}${unit}`;
+    }
+
+    function formatRecordsForPrompt(recordsSubset) {
+      if (!recordsSubset.length) return "暂无记录。";
+      return recordsSubset.map((record) => [
+        `日期：${record.date || "未记录"}`,
+        `体重：${formatPromptNumber(record.weight, 1, "斤")}`,
+        `腰围：${formatPromptNumber(record.waist, 1, "cm")}`,
+        `步数：${formatPromptInteger(record.steps)}`,
+        `有氧分钟：${formatPromptInteger(record.cardio, "分钟")}`,
+        `力量训练：${record.strength ? "是" : "否"}`,
+        `训练类型：${record.trainingType || "未记录"}`,
+        `饮食控制：${record.dietControlled === "yes" ? "是" : record.dietControlled === "no" ? "否" : "未记录"}`,
+        `碳水等级：${record.carbLevel || "未记录"}`
+      ].join("；")).join("\n");
+    }
+
+    function averageBy(recordsSubset, getter) {
+      const values = recordsSubset.map((item) => toNumber(getter(item))).filter((value) => value !== null);
+      if (!values.length) return null;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function currentWeeklySpeedForPrompt() {
+      const weighted = sortedRecords().filter((item) => item.weight !== null).slice(-30);
+      if (weighted.length < 2) return null;
+      const first = weighted[0];
+      const latest = weighted[weighted.length - 1];
+      const days = Math.max(1, daysBetween(first.date, latest.date));
+      return ((first.weight - latest.weight) / days) * 7;
+    }
+
+    function buildAiMetrics() {
+      const weighted = sortedRecords().filter((item) => item.weight !== null);
+      const latest = weighted[weighted.length - 1] || null;
+      const latestDate = latest ? latest.date : todayString();
+      const recent7 = getRecentRecordsForAi(7);
+      const avg3 = averageWeight(3, latestDate);
+      const avg7 = averageWeight(7, latestDate);
+      const avgSteps7 = averageBy(recent7, (item) => item.steps);
+      const cardioTotal7 = recent7.reduce((sum, item) => sum + (toNumber(item.cardio) ?? 0), 0);
+      const strengthCount7 = recent7.filter((item) => item.strength).length;
+      const target = toNumber(settings.targetWeight);
+      const targetGap = latest && target !== null ? Math.max(0, latest.weight - target) : null;
+      const weeklySpeed = currentWeeklySpeedForPrompt();
+
+      return [
+        `3 日均重：${avg3 === null ? "记录不足" : `${avg3.toFixed(1)}斤`}`,
+        `7 日均重：${avg7 === null ? "记录不足" : `${avg7.toFixed(1)}斤`}`,
+        `最近 7 天平均步数：${avgSteps7 === null ? "记录不足" : Math.round(avgSteps7)}`,
+        `最近 7 天有氧总分钟：${cardioTotal7}分钟`,
+        `最近 7 天力量训练次数：${strengthCount7}次`,
+        `距离目标还差：${targetGap === null ? "未设置或无体重记录" : `${targetGap.toFixed(1)}斤`}`,
+        `当前减脂速度：${weeklySpeed === null ? "记录不足" : `${weeklySpeed.toFixed(2)}斤/周`}`
+      ].join("\n");
+    }
+
+    function buildAiPrompt(type) {
+      const promptTypes = {
+        week: {
+          title: "最近 7 天减脂复盘",
+          days: 7,
+          question: "请帮我判断最近 7 天减脂趋势是否正常，执行上最大的问题是什么，明天最应该做哪 3 件事。"
+        },
+        month: {
+          title: "最近 30 天减脂复盘",
+          days: 30,
+          question: "请帮我判断最近 30 天整体趋势、减脂速度是否合适、是否需要调整训练或饮食策略。"
+        },
+        plateau: {
+          title: "平台期排查",
+          days: 30,
+          question: "请判断我是否真的进入平台期。请区分脂肪不降、水分波动、执行不足、训练疲劳这几种可能，并给出排查顺序。"
+        },
+        training: {
+          title: "今日训练建议",
+          days: 7,
+          question: "请根据最近数据判断我今天适合力量训练、有氧、休息还是轻活动，并说明理由。请给出今天的具体执行方案。"
+        }
+      };
+      const config = promptTypes[type] || promptTypes.week;
+      const recent = getRecentRecordsForAi(config.days);
+      const rangeNote = type === "plateau" ? "优先参考最近 14-30 天记录" : `参考最近 ${config.days} 天记录`;
+
+      return [
+        `# ${config.title}`,
+        "",
+        "## 用户背景",
+        "我正在减脂。以下数据来自我的个人减脂记录网页。",
+        "请你像一个理性、谨慎的减脂教练一样分析。",
+        "不要过度解读单日体重波动，优先看趋势、执行稳定性和恢复风险。",
+        "",
+        "## 目标设置",
+        `起始体重：${formatPromptNumber(settings.startWeight, 1, "斤")}`,
+        `目标体重：${formatPromptNumber(settings.targetWeight, 1, "斤")}`,
+        `目标日期：${settings.targetDate || "未设置"}`,
+        "",
+        "## 已计算指标",
+        buildAiMetrics(),
+        "",
+        `## 最近记录（${rangeNote}）`,
+        formatRecordsForPrompt(recent),
+        "",
+        "## 请回答",
+        config.question,
+        "请给出具体、可执行、不过度极端的建议。"
+      ].join("\n");
+    }
+
+    async function copyAiPrompt(type) {
+      const prompt = buildAiPrompt(type);
+      const output = $("#aiPromptOutput");
+      const textarea = $("#aiPromptText");
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(prompt);
+        output.classList.add("hidden");
+        textarea.value = "";
+        toast("已复制，可以粘贴给 ChatGPT 分析。");
+      } catch {
+        textarea.value = prompt;
+        output.classList.remove("hidden");
+        textarea.focus();
+        textarea.select();
+        toast("复制失败，请手动复制文本。");
+      }
+    }
+
     function renderAll(preferredRecord) {
       const record = preferredRecord || getCurrentRecord();
       if (record) {
@@ -1005,20 +1196,28 @@ const DEFAULT_USERS = ["test", "main"];
 
     function initializeForm() {
       fields.date.value = todayString();
-      setStepperValue("startWeight", settings.startWeight ?? defaultWeightValue(), defaultWeightValue());
-      setStepperValue("targetWeight", settings.targetWeight ?? Math.max(20, defaultWeightValue() - 5), 70);
+      if (settings.startWeight !== undefined && settings.startWeight !== null) {
+        setStepperManualValue("startWeight", settings.startWeight, defaultWeightValue());
+      } else {
+        setStepperValue("startWeight", defaultWeightValue(), defaultWeightValue());
+      }
+      if (settings.targetWeight !== undefined && settings.targetWeight !== null) {
+        setStepperManualValue("targetWeight", settings.targetWeight, Math.max(80, defaultWeightValue() - 10));
+      } else {
+        setStepperValue("targetWeight", Math.max(80, defaultWeightValue() - 10), 140);
+      }
       $("#targetDate").value = settings.targetDate ?? "";
       const today = records.find((item) => item.date === fields.date.value);
       if (today) {
         fillForm(today);
       } else {
-        setStepperValue("weight", defaultWeightValue(), 70);
-        setStepperValue("waist", latestRecord()?.waist, 80);
+        setStepperManualValue("weight", defaultWeightValue(), 140);
+        setStepperManualValue("waist", latestRecord()?.waist, 80);
         setStepperValue("steps", 8000, 8000);
-        setStepperValue("neck", latestRecord()?.neck, 35);
-        setStepperValue("hip", latestRecord()?.hip, 95);
-        setStepperValue("thigh", latestRecord()?.thigh, 55);
-        setStepperValue("arm", latestRecord()?.arm, 30);
+        setStepperManualValue("neck", latestRecord()?.neck, 35);
+        setStepperManualValue("hip", latestRecord()?.hip, 95);
+        setStepperManualValue("thigh", latestRecord()?.thigh, 55);
+        setStepperManualValue("arm", latestRecord()?.arm, 30);
         setStepperValue("cardio", 0, 0);
         hasCardio.value = "no";
         fields.trainingType.value = "力量";
@@ -1032,7 +1231,7 @@ const DEFAULT_USERS = ["test", "main"];
       upsertRecord(record);
       if (!settings.startWeight) {
         settings.startWeight = record.weight;
-        setStepperValue("startWeight", record.weight, record.weight);
+        setStepperManualValue("startWeight", record.weight, record.weight);
         saveSettings();
       }
       renderAll(record);
@@ -1040,7 +1239,7 @@ const DEFAULT_USERS = ["test", "main"];
       try {
         const backup = await writeRecordBackup(record);
         renderBackupStatus();
-        toast(backup.skipped ? `已保存，${backup.reason}。` : "已保存，已切到建议页。");
+        toast(backup.skipped ? `已保存，已切到建议页；${backup.reason}。` : "已保存，已切到建议页。");
       } catch (error) {
         renderBackupStatus("本地已保存，备份写入失败");
         toast("本地已保存，但备份写入失败。");
@@ -1081,6 +1280,15 @@ const DEFAULT_USERS = ["test", "main"];
     });
 
     $("#copyPreviousBtn").addEventListener("click", copyPreviousData);
+
+    document.querySelectorAll("[data-ai-prompt]").forEach((button) => {
+      button.addEventListener("click", () => copyAiPrompt(button.dataset.aiPrompt));
+    });
+
+    $("#clearAiPromptBtn").addEventListener("click", () => {
+      $("#aiPromptText").value = "";
+      $("#aiPromptOutput").classList.add("hidden");
+    });
 
     userSelect.addEventListener("change", (event) => {
       switchUser(event.target.value);
@@ -1149,6 +1357,8 @@ const DEFAULT_USERS = ["test", "main"];
         user: currentUser,
         data: records,
         settings,
+        weightUnitVersion: WEIGHT_UNIT_VERSION,
+        weightUnit: "斤",
         exportedAt: new Date().toISOString()
       }, null, 2);
       const blob = new Blob([data], { type: "application/json" });
@@ -1167,6 +1377,14 @@ const DEFAULT_USERS = ["test", "main"];
       if (Array.isArray(imported.data)) return imported.data;
       if (Array.isArray(imported.records)) return imported.records;
       return [];
+    }
+
+    function payloadUsesJin(imported) {
+      return Boolean(imported && typeof imported === "object" && (
+        imported.weightUnitVersion === WEIGHT_UNIT_VERSION ||
+        imported.weightUnit === "斤" ||
+        imported.unit === "jin"
+      ));
     }
 
     function recordUpdatedTime(record) {
@@ -1233,10 +1451,20 @@ const DEFAULT_USERS = ["test", "main"];
       if (!file) return;
       try {
         const imported = JSON.parse(await file.text());
-        const importedList = importedRecordsFromPayload(imported);
+        let importedList = importedRecordsFromPayload(imported);
+        let importedSettings = imported && typeof imported === "object" && imported.settings && typeof imported.settings === "object"
+          ? imported.settings
+          : null;
+        if (!payloadUsesJin(imported) && (importedList.length || importedSettings)) {
+          const convertLegacyWeight = confirm("导入文件没有“斤”单位标记，可能是旧公斤数据。是否按公斤转换为斤？取消则按原值导入。");
+          if (convertLegacyWeight) {
+            importedList = importedList.map(convertRecordWeightToJin);
+            importedSettings = convertSettingsWeightToJin(importedSettings);
+          }
+        }
         const result = mergeImportedRecords(importedList);
-        if (imported.settings && typeof imported.settings === "object" && confirm("是否同时导入目标设置？")) {
-          settings = imported.settings;
+        if (importedSettings && confirm("是否同时导入目标设置？")) {
+          settings = importedSettings;
         }
         saveRecords();
         saveSettings();
@@ -1274,6 +1502,7 @@ const DEFAULT_USERS = ["test", "main"];
 
     function initializeApp() {
       syncUserSelectors();
+      migrateWeightUnitForUser();
       records = loadRecords();
       settings = loadSettings();
       if (appInitialized) {

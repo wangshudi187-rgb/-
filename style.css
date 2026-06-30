@@ -160,7 +160,8 @@
     .app.view-record [data-view-panel="record"],
     .app.view-advice [data-view-panel="advice"],
     .app.view-trend [data-view-panel="trend"],
-    .app.view-data [data-view-panel="data"] {
+    .app.view-data [data-view-panel="data"],
+    .app.view-ai [data-view-panel="ai"] {
       display: block;
     }
 
@@ -566,6 +567,55 @@
       font-size: 14px;
     }
 
+    .ai-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .ai-note {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .ai-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .ai-actions .btn {
+      min-height: 48px;
+      justify-content: center;
+    }
+
+    .ai-output {
+      display: grid;
+      gap: 8px;
+    }
+
+    .ai-output label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ai-output textarea {
+      width: 100%;
+      min-height: 260px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+      color: var(--ink);
+      font: inherit;
+      line-height: 1.55;
+    }
+
     .progress-wrap {
       display: grid;
       gap: 10px;
@@ -822,7 +872,11 @@
 
       .tab-nav button {
         flex: 1;
-        padding: 7px 8px;
+        padding: 7px 6px;
+      }
+
+      .ai-actions {
+        grid-template-columns: 1fr;
       }
 
       .input-title-actions {
