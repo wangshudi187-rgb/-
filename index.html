@@ -91,6 +91,7 @@
                 <summary>手动输入</summary>
                 <input type="number" inputmode="decimal" min="30" max="220" step="0.01" data-manual-for="waist" />
               </details>
+              <button class="clear-field-btn" type="button" data-clear-stepper="waist">清空腰围</button>
             </div>
             <div class="subsection">昨天的运动（选填）</div>
             <div class="field">
@@ -112,6 +113,7 @@
                 <button type="button" data-quick-value="12000">12000</button>
                 <button type="button" data-quick-value="15000">15000</button>
               </div>
+              <button class="clear-field-btn" type="button" data-clear-stepper="steps">清空步数</button>
             </div>
             <div class="field">
               <label for="hasCardio">专项有氧</label>
@@ -140,6 +142,7 @@
                 <button type="button" data-quick-value="60">60</button>
                 <button type="button" data-quick-value="90">90</button>
               </div>
+              <button class="clear-field-btn" type="button" data-clear-stepper="cardio">清空有氧分钟</button>
             </div>
             <div class="field full">
               <label>昨日力量训练</label>
@@ -172,6 +175,7 @@
                     <summary>手动输入</summary>
                     <input type="number" inputmode="decimal" min="20" max="80" step="0.01" data-manual-for="neck" />
                   </details>
+                  <button class="clear-field-btn" type="button" data-clear-stepper="neck">清空颈围</button>
                 </div>
                 <div class="field">
                   <label for="hip">臀围 cm</label>
@@ -185,6 +189,7 @@
                     <summary>手动输入</summary>
                     <input type="number" inputmode="decimal" min="40" max="180" step="0.01" data-manual-for="hip" />
                   </details>
+                  <button class="clear-field-btn" type="button" data-clear-stepper="hip">清空臀围</button>
                 </div>
                 <div class="field">
                   <label for="thigh">大腿围 cm</label>
@@ -198,6 +203,7 @@
                     <summary>手动输入</summary>
                     <input type="number" inputmode="decimal" min="20" max="100" step="0.01" data-manual-for="thigh" />
                   </details>
+                  <button class="clear-field-btn" type="button" data-clear-stepper="thigh">清空大腿围</button>
                 </div>
                 <div class="field">
                   <label for="arm">上臂围 cm</label>
@@ -211,6 +217,7 @@
                     <summary>手动输入</summary>
                     <input type="number" inputmode="decimal" min="10" max="80" step="0.01" data-manual-for="arm" />
                   </details>
+                  <button class="clear-field-btn" type="button" data-clear-stepper="arm">清空上臂围</button>
                 </div>
               </div>
             </details>
@@ -224,39 +231,75 @@
             <h2>目标设置</h2>
             <span class="hint">用于进度与预计日期</span>
           </div>
-          <div class="grid">
-            <div class="field">
-              <label for="startWeight">起始体重 斤</label>
-              <input id="startWeight" type="hidden" />
-              <div class="stepper" data-target="startWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
-                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                <div class="stepper-display"><strong data-stepper-value>160.0</strong><span>斤</span></div>
-                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+          <div id="goalSummary">
+            <div class="goal-empty" id="goalEmptyText">尚未设置目标</div>
+            <div class="metric-grid goal-summary-grid hidden" id="goalSummaryMetrics">
+              <div class="metric">
+                <div class="name">起始体重</div>
+                <div class="value" id="goalSummaryStart">--</div>
+                <div class="note">斤</div>
               </div>
-              <details class="manual-entry">
-                <summary>手动输入</summary>
-                <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="startWeight" />
-              </details>
-            </div>
-            <div class="field">
-              <label for="targetWeight">目标体重 斤</label>
-              <input id="targetWeight" type="hidden" />
-              <div class="stepper" data-target="targetWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
-                <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
-                <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+              <div class="metric">
+                <div class="name">目标体重</div>
+                <div class="value" id="goalSummaryTarget">--</div>
+                <div class="note">斤</div>
               </div>
-              <details class="manual-entry">
-                <summary>手动输入</summary>
-                <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="targetWeight" />
-              </details>
+              <div class="metric">
+                <div class="name">目标日期</div>
+                <div class="value compact-value" id="goalSummaryDate">--</div>
+                <div class="note">计划日期</div>
+              </div>
+              <div class="metric">
+                <div class="name">距离目标</div>
+                <div class="value" id="goalSummaryGap">--</div>
+                <div class="note">斤</div>
+              </div>
+              <div class="metric">
+                <div class="name">完成进度</div>
+                <div class="value" id="goalSummaryProgress">--</div>
+                <div class="note">按当前体重</div>
+              </div>
             </div>
-            <div class="field full">
-              <label for="targetDate">目标日期</label>
-              <input id="targetDate" type="date" />
+            <button class="btn block" id="editGoalBtn" type="button">设置目标</button>
+          </div>
+          <div class="goal-edit hidden" id="goalEditForm">
+            <div class="grid">
+              <div class="field">
+                <label for="startWeight">起始体重 斤</label>
+                <input id="startWeight" type="hidden" />
+                <div class="stepper" data-target="startWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
+                  <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                  <div class="stepper-display"><strong data-stepper-value>160.0</strong><span>斤</span></div>
+                  <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                </div>
+                <details class="manual-entry">
+                  <summary>手动输入</summary>
+                  <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="startWeight" />
+                </details>
+              </div>
+              <div class="field">
+                <label for="targetWeight">目标体重 斤</label>
+                <input id="targetWeight" type="hidden" />
+                <div class="stepper" data-target="targetWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
+                  <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+                  <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
+                  <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+                </div>
+                <details class="manual-entry">
+                  <summary>手动输入</summary>
+                  <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="targetWeight" />
+                </details>
+              </div>
+              <div class="field full">
+                <label for="targetDate">目标日期</label>
+                <input id="targetDate" type="date" />
+              </div>
+            </div>
+            <div class="goal-edit-actions">
+              <button class="btn primary" id="saveSettingsBtn" type="button">保存目标</button>
+              <button class="btn" id="cancelGoalEditBtn" type="button">取消</button>
             </div>
           </div>
-          <button class="btn block" id="saveSettingsBtn" type="button">保存目标</button>
         </section>
         <section class="card" data-view-panel="data">
           <div class="section-title">
@@ -287,6 +330,7 @@
             <span class="hint">从第一条体重记录开始</span>
           </div>
           <div class="long-term-callout" id="longOverviewText">开始记录后，这里会显示你的长期成果。</div>
+          <div class="milestone-note" id="longMilestoneText">完成 7 天记录后会显示阶段里程碑。</div>
           <div class="metric-grid long-term-grid">
             <div class="metric">
               <div class="name">已坚持天数</div>
@@ -506,6 +550,11 @@
               <h3>步数趋势</h3>
               <canvas id="stepsChart"></canvas>
             </div>
+            <div class="chart-box">
+              <h3>累计变化</h3>
+              <canvas id="cumulativeChart"></canvas>
+              <div class="chart-empty hidden" id="cumulativeEmpty">至少需要 2 条体重记录</div>
+            </div>
           </div>
         </section>
 
@@ -519,16 +568,18 @@
               本功能只负责整理数据和生成 Prompt。复制后是否发送给 ChatGPT，由你自己决定。
             </div>
             <div class="ai-actions">
-              <button class="btn" type="button" data-ai-prompt="week">复制 7 天复盘</button>
-              <button class="btn" type="button" data-ai-prompt="month">复制 30 天复盘</button>
+              <button class="btn" type="button" data-ai-prompt="week">生成 7 天复盘 Prompt</button>
+              <button class="btn" type="button" data-ai-prompt="month">生成 30 天复盘 Prompt</button>
               <button class="btn" type="button" data-ai-prompt="all">生成全周期复盘 Prompt</button>
-              <button class="btn" type="button" data-ai-prompt="plateau">复制平台期排查</button>
-              <button class="btn" type="button" data-ai-prompt="training">复制今日训练建议</button>
+              <button class="btn" type="button" data-ai-prompt="plateau">生成平台期排查 Prompt</button>
             </div>
-            <div class="ai-output hidden" id="aiPromptOutput">
-              <label for="aiPromptText">复制失败时可手动复制以下文本</label>
-              <textarea id="aiPromptText" readonly></textarea>
-              <button class="btn small" id="clearAiPromptBtn" type="button">清空文本</button>
+            <div class="ai-output" id="aiPromptOutput">
+              <label for="aiPromptText">生成的 Prompt</label>
+              <textarea id="aiPromptText" placeholder="选择上方一种复盘后，Prompt 会显示在这里。" readonly></textarea>
+              <div class="ai-output-actions">
+                <button class="btn" id="copyCurrentAiPromptBtn" type="button">复制当前 Prompt</button>
+                <button class="btn" id="clearAiPromptBtn" type="button">清空 Prompt</button>
+              </div>
             </div>
           </div>
         </section>
@@ -549,11 +600,12 @@
                   <th>臀围</th>
                   <th>大腿</th>
                   <th>昨日训练</th>
+                  <th>保存时间</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="historyBody">
-                <tr><td class="empty" colspan="8">暂无记录</td></tr>
+                <tr><td class="empty" colspan="9">暂无记录</td></tr>
               </tbody>
             </table>
           </div>
@@ -562,6 +614,19 @@
       </div>
     </section>
   </main>
+
+  <div class="modal-backdrop hidden" id="clearConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="clearDialogTitle">
+    <div class="modal-card">
+      <h2 id="clearDialogTitle">确认清空数据</h2>
+      <p>此操作会清空当前用户的全部记录和目标设置。请输入 <strong>CLEAR</strong> 继续。</p>
+      <label for="clearConfirmationInput">确认文字</label>
+      <input id="clearConfirmationInput" type="text" autocomplete="off" placeholder="CLEAR" />
+      <div class="modal-actions">
+        <button class="btn" id="cancelClearBtn" type="button">取消</button>
+        <button class="btn danger" id="confirmClearBtn" type="button">确认清空</button>
+      </div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
   </div>

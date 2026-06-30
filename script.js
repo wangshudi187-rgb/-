@@ -40,6 +40,7 @@ const WEIGHT_UNIT_VERSION = "jin";
     let weightChart;
     let waistChart;
     let stepsChart;
+    let cumulativeChart;
     let backupDirectoryHandle = null;
     let appInitialized = false;
     let steppersInitialized = false;
@@ -163,7 +164,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       if (tab === "trend") {
         renderCharts();
         window.setTimeout(() => {
-          [weightChart, waistChart, stepsChart].forEach((chart) => chart && chart.resize());
+          [weightChart, waistChart, stepsChart, cumulativeChart].forEach((chart) => chart && chart.resize());
         }, 80);
       }
       if (tab === "data") renderHistory();
@@ -241,6 +242,12 @@ const WEIGHT_UNIT_VERSION = "jin";
           const button = event.target.closest("[data-quick-value]");
           if (!button) return;
           setStepperValue(group.dataset.quickFor, button.dataset.quickValue, button.dataset.quickValue);
+        });
+      });
+
+      document.querySelectorAll("[data-clear-stepper]").forEach((button) => {
+        button.addEventListener("click", () => {
+          clearStepperValue(button.dataset.clearStepper);
         });
       });
       steppersInitialized = true;
@@ -582,6 +589,26 @@ const WEIGHT_UNIT_VERSION = "jin";
       weightChart = buildChart("#weightChart", weightChart, "体重 斤", windowed.map((item) => ({ date: item.date, value: item.weight })), "#171717");
       waistChart = buildChart("#waistChart", waistChart, "腰围 cm", windowed.map((item) => ({ date: item.date, value: item.waist })), "#6b6b65");
       stepsChart = buildChart("#stepsChart", stepsChart, "步数", windowed.map((item) => ({ date: item.date, value: item.steps })), "#3e3e3a");
+
+      const allWeighted = validWeightRecords();
+      const baseline = allWeighted[0]?.weight ?? null;
+      const cumulativeData = baseline === null
+        ? []
+        : validWeightRecords(windowed).map((item) => ({
+          date: item.date,
+          value: Number((item.weight - baseline).toFixed(1))
+        }));
+      const hasCumulativeTrend = cumulativeData.length >= 2;
+      const cumulativeCanvas = $("#cumulativeChart");
+      $("#cumulativeEmpty").classList.toggle("hidden", hasCumulativeTrend);
+      cumulativeCanvas.classList.toggle("hidden", !hasCumulativeTrend);
+      if (cumulativeChart) {
+        cumulativeChart.destroy();
+        cumulativeChart = null;
+      }
+      if (hasCumulativeTrend) {
+        cumulativeChart = buildChart("#cumulativeChart", null, "累计变化 斤", cumulativeData, "#176b3a");
+      }
     }
 
     function formatDate(date) {
@@ -658,6 +685,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         ["longDays", "longRecordCount", "longStartWeight", "longCurrentWeight", "longChange", "longRange", "longTargetGap", "longProgress", "longWeeklyChange", "stage7Change", "stage30Change", "stageAllChange", "stage7Count", "stage30Count"]
           .forEach((id) => { $(`#${id}`).textContent = "--"; });
         $("#longOverviewText").textContent = "开始记录后，这里会显示你的长期成果。";
+        $("#longMilestoneText").textContent = "完成 7 天记录后会显示阶段里程碑。";
         return;
       }
 
@@ -681,8 +709,56 @@ const WEIGHT_UNIT_VERSION = "jin";
         : metrics.change > 0
           ? `累计变化 +${metrics.change.toFixed(1)} 斤`
           : "体重保持稳定";
-      const progressText = metrics.progress === null ? "" : ` 你已经完成目标的 ${Math.round(metrics.progress)}%。`;
-      $("#longOverviewText").textContent = `已记录 ${metrics.elapsedDays} 天，${achievement}。${progressText}`;
+      const overviewParts = [`已记录 ${metrics.elapsedDays} 天`, achievement];
+      if (metrics.progress !== null) overviewParts.push(`完成目标的 ${Math.round(metrics.progress)}%`);
+      $("#longOverviewText").textContent = `${overviewParts.join("，")}。`;
+
+      const milestones = [];
+      const dayMilestone = [90, 60, 30, 7].find((value) => metrics.elapsedDays >= value);
+      const loss = Math.max(0, -metrics.change);
+      const lossMilestone = [20, 10, 5].find((value) => loss >= value);
+      const progressMilestone = [75, 50, 25].find((value) => metrics.progress !== null && metrics.progress >= value);
+      if (dayMilestone) milestones.push(`持续记录超过 ${dayMilestone} 天`);
+      if (lossMilestone) milestones.push(`累计下降超过 ${lossMilestone} 斤`);
+      if (progressMilestone) milestones.push(`目标完成超过 ${progressMilestone}%`);
+      $("#longMilestoneText").textContent = milestones.length
+        ? `阶段里程碑：${milestones.join(" · ")}`
+        : "继续积累记录，首个阶段里程碑是记录满 7 天。";
+    }
+
+    function renderGoalSummary() {
+      const target = toNumber(settings.targetWeight);
+      const configuredStart = toNumber(settings.startWeight);
+      const weighted = validWeightRecords();
+      const first = weighted[0] || null;
+      const latest = weighted[weighted.length - 1] || null;
+      const start = configuredStart ?? first?.weight ?? null;
+      const hasGoal = target !== null;
+      const summaryMetrics = $("#goalSummaryMetrics");
+      const emptyText = $("#goalEmptyText");
+      summaryMetrics.classList.toggle("hidden", !hasGoal);
+      emptyText.classList.toggle("hidden", hasGoal);
+      $("#editGoalBtn").textContent = hasGoal ? "修改目标" : "设置目标";
+      if (!hasGoal) {
+        emptyText.textContent = "尚未设置目标";
+        return;
+      }
+
+      const gap = latest ? Math.max(0, latest.weight - target) : null;
+      let progress = null;
+      if (start !== null && start !== target && latest) {
+        progress = clamp(((start - latest.weight) / (start - target)) * 100, 0, 100);
+      }
+      $("#goalSummaryStart").textContent = start === null ? "--" : start.toFixed(1);
+      $("#goalSummaryTarget").textContent = target.toFixed(1);
+      $("#goalSummaryDate").textContent = settings.targetDate || "--";
+      $("#goalSummaryGap").textContent = gap === null ? "--" : gap.toFixed(1);
+      $("#goalSummaryProgress").textContent = progress === null ? "--" : `${Math.round(progress)}%`;
+    }
+
+    function setGoalEditorOpen(open) {
+      $("#goalSummary").classList.toggle("hidden", open);
+      $("#goalEditForm").classList.toggle("hidden", !open);
     }
 
     function renderLossBreakdown() {
@@ -855,7 +931,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       const cards = $("#historyCards");
       const sorted = sortedRecords().reverse();
       if (!sorted.length) {
-        body.innerHTML = `<tr><td class="empty" colspan="8">暂无记录</td></tr>`;
+        body.innerHTML = `<tr><td class="empty" colspan="9">暂无记录</td></tr>`;
         cards.innerHTML = `<div class="empty">暂无记录</div>`;
         return;
       }
@@ -869,6 +945,7 @@ const WEIGHT_UNIT_VERSION = "jin";
           <td>${item.hip ?? "--"}</td>
           <td>${item.thigh ?? "--"}</td>
           <td>${item.strength ? "力量" : item.trainingType || "--"}</td>
+          <td>${formatUpdatedAt(item.updatedAt)}</td>
           <td><button class="btn danger" type="button" data-delete="${item.date}">删除</button></td>
         </tr>
       `).join("");
@@ -885,12 +962,21 @@ const WEIGHT_UNIT_VERSION = "jin";
             <div>步数<strong>${item.steps ?? "--"}</strong></div>
             <div>有氧<strong>${item.cardio ?? "--"} min</strong></div>
           </div>
+          <div class="history-saved-time">保存时间：${formatUpdatedAt(item.updatedAt)}</div>
           <div class="history-card-actions">
             <button class="btn" type="button" data-load="${item.date}">编辑</button>
             <button class="btn danger" type="button" data-delete="${item.date}">删除</button>
           </div>
         </article>
       `).join("");
+    }
+
+    function formatUpdatedAt(value) {
+      if (!value) return "--";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "--";
+      const pad = (number) => String(number).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
     function renderWeeklySummary() {
@@ -1027,11 +1113,6 @@ const WEIGHT_UNIT_VERSION = "jin";
           title: "平台期排查",
           days: 30,
           question: "请判断我是否真的进入平台期。请区分脂肪不降、水分波动、执行不足、训练疲劳这几种可能，并给出排查顺序。"
-        },
-        training: {
-          title: "今日训练建议",
-          days: 7,
-          question: "请根据最近数据判断我今天适合力量训练、有氧、休息还是轻活动，并说明理由。请给出今天的具体执行方案。"
         }
       };
       const config = promptTypes[type] || promptTypes.week;
@@ -1067,20 +1148,33 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     async function copyAiPrompt(type) {
       const prompt = buildAiPrompt(type);
-      const output = $("#aiPromptOutput");
       const textarea = $("#aiPromptText");
+      textarea.value = prompt;
       try {
         if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard API unavailable");
         await navigator.clipboard.writeText(prompt);
-        output.classList.add("hidden");
-        textarea.value = "";
-        toast("已复制，可以粘贴给 ChatGPT 分析。");
+        toast("Prompt 已生成并复制。");
       } catch {
-        textarea.value = prompt;
-        output.classList.remove("hidden");
         textarea.focus();
         textarea.select();
-        toast("复制失败，请手动复制文本。");
+        toast("Prompt 已生成，自动复制失败，可手动复制。");
+      }
+    }
+
+    async function copyCurrentAiPrompt() {
+      const prompt = $("#aiPromptText").value;
+      if (!prompt) {
+        toast("请先生成 Prompt。");
+        return;
+      }
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(prompt);
+        toast("当前 Prompt 已复制。");
+      } catch {
+        $("#aiPromptText").focus();
+        $("#aiPromptText").select();
+        toast("自动复制失败，请手动复制。");
       }
     }
 
@@ -1089,6 +1183,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       renderProgress();
       renderLossBreakdown();
       renderLongTermOverview();
+      renderGoalSummary();
       renderHistory();
       renderWeeklySummary();
     }
@@ -1112,8 +1207,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       toast.timer = window.setTimeout(() => el.classList.remove("show"), action ? 5200 : 2200);
     }
 
-    function initializeForm() {
-      fields.date.value = todayString();
+    function populateGoalEditor() {
       if (settings.startWeight !== undefined && settings.startWeight !== null) {
         setStepperManualValue("startWeight", settings.startWeight, defaultWeightValue());
       } else {
@@ -1125,6 +1219,12 @@ const WEIGHT_UNIT_VERSION = "jin";
         setStepperValue("targetWeight", Math.max(80, defaultWeightValue() - 10), 140);
       }
       $("#targetDate").value = settings.targetDate ?? "";
+    }
+
+    function initializeForm() {
+      fields.date.value = todayString();
+      populateGoalEditor();
+      setGoalEditorOpen(false);
       const today = records.find((item) => item.date === fields.date.value);
       if (today) {
         fillForm(today);
@@ -1188,14 +1288,23 @@ const WEIGHT_UNIT_VERSION = "jin";
     });
 
     $("#saveSettingsBtn").addEventListener("click", () => {
+      syncManualStepperValues();
       settings.startWeight = toNumber($("#startWeight").value);
       settings.targetWeight = toNumber($("#targetWeight").value);
       settings.targetDate = $("#targetDate").value;
       saveSettings();
       renderProgress();
       renderLongTermOverview();
+      renderGoalSummary();
+      setGoalEditorOpen(false);
       toast("目标已保存。");
     });
+
+    $("#editGoalBtn").addEventListener("click", () => {
+      populateGoalEditor();
+      setGoalEditorOpen(true);
+    });
+    $("#cancelGoalEditBtn").addEventListener("click", () => setGoalEditorOpen(false));
 
     $("#copyPreviousBtn").addEventListener("click", copyPreviousData);
 
@@ -1205,8 +1314,9 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     $("#clearAiPromptBtn").addEventListener("click", () => {
       $("#aiPromptText").value = "";
-      $("#aiPromptOutput").classList.add("hidden");
+      toast("Prompt 已清空。");
     });
+    $("#copyCurrentAiPromptBtn").addEventListener("click", copyCurrentAiPrompt);
 
     userSelect.addEventListener("change", (event) => {
       switchUser(event.target.value);
@@ -1273,25 +1383,38 @@ const WEIGHT_UNIT_VERSION = "jin";
     $("#historyBody").addEventListener("click", handleHistoryClick);
     $("#historyCards").addEventListener("click", handleHistoryClick);
 
-    $("#exportBtn").addEventListener("click", () => {
-      const data = JSON.stringify({
+    function buildExportPayload() {
+      return {
         user: currentUser,
         data: records,
         settings,
         weightUnitVersion: WEIGHT_UNIT_VERSION,
         weightUnit: "斤",
         exportedAt: new Date().toISOString()
-      }, null, 2);
+      };
+    }
+
+    function downloadDataFile(prefix = "fat-loss-tracker") {
+      const data = JSON.stringify(buildExportPayload(), null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `fat-loss-tracker-${currentUser}-${todayString()}.json`;
+      link.download = `${prefix}-${currentUser}-${todayString()}.json`;
       link.click();
       URL.revokeObjectURL(url);
+    }
+
+    $("#exportBtn").addEventListener("click", () => {
+      downloadDataFile();
     });
 
-    $("#importBtn").addEventListener("click", () => $("#importFile").click());
+    $("#importBtn").addEventListener("click", () => {
+      const proceed = confirm("导入会按日期合并记录；同日期记录可能按更新时间覆盖。继续前会自动下载一份当前数据备份。是否继续？");
+      if (!proceed) return;
+      downloadDataFile("pre-import-backup");
+      $("#importFile").click();
+    });
 
     function importedRecordsFromPayload(imported) {
       if (Array.isArray(imported)) return imported;
@@ -1399,14 +1522,30 @@ const WEIGHT_UNIT_VERSION = "jin";
       }
     });
 
+    function closeClearDialog() {
+      $("#clearConfirmDialog").classList.add("hidden");
+      $("#clearConfirmationInput").value = "";
+    }
+
     $("#clearBtn").addEventListener("click", () => {
-      if (!confirm("确认清空全部本地记录和目标设置？")) return;
+      $("#clearConfirmDialog").classList.remove("hidden");
+      $("#clearConfirmationInput").focus();
+    });
+
+    $("#cancelClearBtn").addEventListener("click", closeClearDialog);
+
+    $("#confirmClearBtn").addEventListener("click", () => {
+      if ($("#clearConfirmationInput").value !== "CLEAR") {
+        toast("未清空数据。");
+        return;
+      }
       records = [];
       settings = {};
       saveRecords();
       saveSettings();
       initializeForm();
       renderAll();
+      closeClearDialog();
       toast("已清空。");
     });
 

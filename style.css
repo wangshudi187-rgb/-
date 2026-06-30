@@ -430,6 +430,21 @@
       background: var(--soft);
     }
 
+    .clear-field-btn {
+      justify-self: start;
+      min-height: 30px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 2px 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .clear-field-btn:hover {
+      color: var(--bad);
+    }
+
     .more-measures {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -575,8 +590,43 @@
       font-weight: 700;
     }
 
+    .milestone-note {
+      margin: -4px 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .long-term-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .goal-empty {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbfa;
+      padding: 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .goal-summary-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .compact-value {
+      font-size: 15px !important;
+    }
+
+    .goal-edit {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+
+    .goal-edit-actions,
+    .ai-output-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
     }
 
     .ai-panel {
@@ -626,6 +676,10 @@
       color: var(--ink);
       font: inherit;
       line-height: 1.55;
+    }
+
+    .ai-output textarea:placeholder-shown {
+      color: var(--muted);
     }
 
     .progress-wrap {
@@ -693,7 +747,7 @@
 
     .charts {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -708,6 +762,15 @@
     .chart-box h3 {
       margin: 0 0 8px;
       font-size: 13px;
+    }
+
+    .chart-empty {
+      min-height: 210px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
     }
 
     canvas {
@@ -784,10 +847,52 @@
       margin-top: 2px;
     }
 
+    .history-saved-time {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .empty {
       color: var(--muted);
       text-align: center;
       padding: 24px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.36);
+      padding: 20px;
+    }
+
+    .modal-card {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .modal-card h2,
+    .modal-card p {
+      margin: 0;
+    }
+
+    .modal-card p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
     }
 
     .toast {
