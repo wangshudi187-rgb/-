@@ -29,8 +29,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       arm: $("#arm"),
       cardio: $("#cardio"),
       strength: $("#strength"),
-      trainingType: $("#trainingType"),
-      dietControlled: $("#dietControlled")
+      trainingType: $("#trainingType")
     };
 
     let currentUser = localStorage.getItem(CURRENT_USER_KEY) || "main";
@@ -123,6 +122,29 @@ const WEIGHT_UNIT_VERSION = "jin";
       if (config.manual) config.manual.value = formatted;
     }
 
+    function clearStepperValue(target) {
+      const config = stepperConfig(target);
+      if (!config) return;
+      config.input.value = "";
+      config.display.textContent = "--";
+      if (config.manual) config.manual.value = "";
+    }
+
+    function setOptionalStepperValue(target, value) {
+      if (toNumber(value) === null) {
+        clearStepperValue(target);
+      } else {
+        setStepperManualValue(target, value, value);
+      }
+    }
+
+    function syncManualStepperValues() {
+      document.querySelectorAll("[data-manual-for]").forEach((input) => {
+        if (input.value === "") return;
+        setStepperManualValue(input.dataset.manualFor, input.value, input.value);
+      });
+    }
+
     function changeStepperValue(target, direction) {
       const config = stepperConfig(target);
       if (!config) return;
@@ -132,7 +154,7 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     function setActiveTab(tab) {
       activeTab = tab;
-      appRoot.classList.remove("view-record", "view-advice", "view-trend", "view-data", "view-ai");
+      appRoot.classList.remove("view-record", "view-trend", "view-data", "view-ai");
       appRoot.classList.add(`view-${tab}`);
       document.querySelectorAll("[data-tab]").forEach((button) => {
         button.classList.toggle("active", button.dataset.tab === tab);
@@ -153,7 +175,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         element.classList.toggle("hidden", !enabled);
       });
       if (!enabled) {
-        setStepperValue("cardio", 0, 0);
+        clearStepperValue("cardio");
         fields.trainingType.value = "力量";
       } else if (fields.trainingType.value === "力量") {
         fields.trainingType.value = "Zone2";
@@ -206,7 +228,11 @@ const WEIGHT_UNIT_VERSION = "jin";
 
       document.querySelectorAll("[data-manual-for]").forEach((input) => {
         input.addEventListener("change", () => {
-          setStepperManualValue(input.dataset.manualFor, input.value, input.value);
+          if (input.value === "") {
+            clearStepperValue(input.dataset.manualFor);
+          } else {
+            setStepperManualValue(input.dataset.manualFor, input.value, input.value);
+          }
         });
       });
 
@@ -413,8 +439,8 @@ const WEIGHT_UNIT_VERSION = "jin";
     }
 
     function recordFromForm() {
+      syncManualStepperValues();
       updateCardioDetails();
-      const carbInput = document.querySelector("input[name='carbLevel']:checked");
       return {
         user: currentUser,
         id: fields.date.value,
@@ -428,10 +454,8 @@ const WEIGHT_UNIT_VERSION = "jin";
         thigh: toNumber(fields.thigh.value),
         arm: toNumber(fields.arm.value),
         strength: fields.strength.checked,
-        cardio: toNumber(fields.cardio.value),
-        trainingType: fields.trainingType.value,
-        dietControlled: fields.dietControlled.value,
-        carbLevel: carbInput ? carbInput.value : "低",
+        cardio: hasCardio.value === "yes" ? toNumber(fields.cardio.value) : null,
+        trainingType: hasCardio.value === "yes" ? fields.trainingType.value : null,
         updatedAt: new Date().toISOString()
       };
     }
@@ -440,20 +464,17 @@ const WEIGHT_UNIT_VERSION = "jin";
       if (!record) return;
       fields.date.value = record.date || todayString();
       setStepperManualValue("weight", record.weight, defaultWeightValue());
-      setStepperManualValue("waist", record.waist, 80);
-      setStepperManualValue("steps", record.steps, 8000);
-      setStepperManualValue("neck", record.neck, 35);
-      setStepperManualValue("hip", record.hip, 95);
-      setStepperManualValue("thigh", record.thigh, 55);
-      setStepperManualValue("arm", record.arm, 30);
-      setStepperManualValue("cardio", record.cardio, 0);
+      setOptionalStepperValue("waist", record.waist);
+      setOptionalStepperValue("steps", record.steps);
+      setOptionalStepperValue("neck", record.neck);
+      setOptionalStepperValue("hip", record.hip);
+      setOptionalStepperValue("thigh", record.thigh);
+      setOptionalStepperValue("arm", record.arm);
       hasCardio.value = (record.cardio ?? 0) > 0 ? "yes" : "no";
       fields.strength.checked = Boolean(record.strength);
       fields.trainingType.value = record.trainingType || "力量";
-      fields.dietControlled.value = record.dietControlled || "yes";
-      const carb = document.querySelector(`input[name='carbLevel'][value='${record.carbLevel || "低"}']`);
-      if (carb) carb.checked = true;
       updateCardioDetails();
+      if (hasCardio.value === "yes") setOptionalStepperValue("cardio", record.cardio);
     }
 
     function copyPreviousData() {
@@ -466,18 +487,17 @@ const WEIGHT_UNIT_VERSION = "jin";
 
       fields.date.value = todayString();
       setStepperManualValue("weight", previous.weight, defaultWeightValue());
-      setStepperManualValue("waist", previous.waist, 80);
-      setStepperManualValue("neck", previous.neck, 35);
-      setStepperManualValue("hip", previous.hip, 95);
-      setStepperManualValue("thigh", previous.thigh, 55);
-      setStepperManualValue("arm", previous.arm, 30);
-      setStepperManualValue("steps", previous.steps, 8000);
-      setStepperManualValue("cardio", previous.cardio, 0);
+      setOptionalStepperValue("waist", previous.waist);
+      setOptionalStepperValue("neck", previous.neck);
+      setOptionalStepperValue("hip", previous.hip);
+      setOptionalStepperValue("thigh", previous.thigh);
+      setOptionalStepperValue("arm", previous.arm);
+      setOptionalStepperValue("steps", previous.steps);
       fields.strength.checked = Boolean(previous.strength);
+      hasCardio.value = (previous.cardio ?? 0) > 0 ? "yes" : "no";
       fields.trainingType.value = previous.trainingType || "力量";
-      fields.dietControlled.value = previous.dietControlled || "yes";
-      const carb = document.querySelector(`input[name='carbLevel'][value='${previous.carbLevel || "低"}']`);
-      if (carb) carb.checked = true;
+      updateCardioDetails();
+      if (hasCardio.value === "yes") setOptionalStepperValue("cardio", previous.cardio);
       toast("已沿用上次数据，日期保持今天。");
     }
 
@@ -491,24 +511,6 @@ const WEIGHT_UNIT_VERSION = "jin";
       saveRecords();
     }
 
-    function isPlateau(record) {
-      const throughDate = sortedRecords()
-        .filter((item) => item.date <= record.date && item.weight !== null)
-        .slice(-7);
-      if (throughDate.length < 7) return false;
-      const first = throughDate[0].weight;
-      const last = throughDate[throughDate.length - 1].weight;
-      return last >= first;
-    }
-
-    function isWaistImproving(record) {
-      const recent = sortedRecords()
-        .filter((item) => item.date <= record.date && item.waist !== null)
-        .slice(-7);
-      if (recent.length < 2) return false;
-      return recent[recent.length - 1].waist < recent[0].waist;
-    }
-
     function averageWeight(days, throughDate) {
       const recent = sortedRecords()
         .filter((item) => item.date <= throughDate && item.weight !== null)
@@ -517,172 +519,10 @@ const WEIGHT_UNIT_VERSION = "jin";
       return recent.reduce((sum, item) => sum + item.weight, 0) / recent.length;
     }
 
-    function recentRecords(days, throughDate) {
-      return sortedRecords().filter((item) => item.date <= throughDate).slice(-days);
-    }
-
-    function countRecent(recordsList, predicate) {
-      return recordsList.filter(predicate).length;
-    }
-
-    function analyze(record) {
-      if (!record) return null;
-
-      const plateau = isPlateau(record);
-      const waistImproving = isWaistImproving(record);
-      const weightRecordCount = sortedRecords().filter((item) => item.date <= record.date && item.weight !== null).length;
-      const avg3 = averageWeight(3, record.date);
-      const avg7 = averageWeight(7, record.date);
-      const last3 = recentRecords(3, record.date);
-      const lowStepDays = countRecent(last3, (item) => (item.steps ?? 0) < 8000);
-      const highCardioDays = countRecent(last3, (item) => (item.cardio ?? 0) > 90);
-      const highTrainingLoad = record.cardio > 90 || (record.trainingType === "HIIT" && record.cardio >= 45);
-      let status = "CUT";
-      let statusReason = waistImproving ? "腰围趋势在下降，减脂仍在推进。" : "今天早上的体重和围度已记录，继续观察趋势。";
-
-      if (highTrainingLoad) {
-        status = "RECOVERY";
-        statusReason = "昨天训练负荷偏高，今天优先恢复与控制疲劳。";
-      } else if (plateau) {
-        status = "PLATEAU";
-        statusReason = "最近 7 条体重记录未下降，进入平台期观察。";
-      } else if (record.dietControlled !== "yes" && !waistImproving) {
-        status = "MAINTAIN";
-        statusReason = "饮食控制未开启，且围度暂未显示下降。";
-      }
-
-      let risk = "LOW";
-      const riskReasons = [];
-      if (record.cardio > 90) {
-        risk = "MEDIUM";
-        riskReasons.push("昨日有氧超过 90 分钟");
-      }
-      if (record.trainingType === "HIIT" && record.cardio >= 45) {
-        risk = "HIGH";
-        riskReasons.push("昨日 HIIT 时间偏长");
-      }
-
-      const trainOk = status !== "RECOVERY" && record.cardio <= 75;
-      let cardioAdvice = "建议 30-45 分钟低强度有氧（Zone2）。";
-      if (status === "RECOVERY") cardioAdvice = "建议休息或 20-30 分钟轻松步行。";
-      if (status === "PLATEAU") cardioAdvice = "建议 45-60 分钟低强度有氧（Zone2），先不堆到 90 分钟以上。";
-      if (record.cardio > 90) cardioAdvice = "昨天有氧已偏高，今天控制在 45-60 分钟。";
-
-      let carbAdvice = "今天不需要额外增加碳水。";
-      if (status === "RECOVERY" || record.trainingType === "HIIT") {
-        carbAdvice = "建议增加约 30g 碳水，优先放在训练前后或晚餐。";
-      } else if (status === "PLATEAU" && record.carbLevel === "低") {
-        carbAdvice = "可安排一次增加约 30g 碳水的训练日，观察体重和腰围波动。";
-      }
-
-      const targets = [
-        record.steps >= 8000,
-        record.dietControlled === "yes",
-        record.cardio <= 90,
-        record.waist !== null
-      ];
-      const passed = targets.filter(Boolean).length;
-
-      const mainAdvice = [
-        trainOk ? "今天可以训练，强度以可恢复为边界。" : "今天不适合高强度训练，恢复优先。",
-        risk === "HIGH" ? "昨天负荷偏高，今天先降低强度。" : "昨日训练负荷可控，继续稳定执行。",
-        status === "PLATEAU" ? "平台期先看 7-14 天均值，并同步看腰围变化。" : "继续看体重和围度双趋势，不用过度解读单日体重。"
-      ].join(" ");
-
-      const trendMessages = [];
-      if (weightRecordCount < 3) {
-        trendMessages.push("记录不足 3 条，先积累数据。");
-      } else if (avg3 !== null) {
-        trendMessages.push(`3日均重 ${avg3.toFixed(1)}斤`);
-      }
-      if (weightRecordCount < 7) {
-        trendMessages.push("7 日趋势需要更多记录。");
-      } else if (avg7 !== null) {
-        trendMessages.push(`7日均重 ${avg7.toFixed(1)}斤`);
-      }
-      if (plateau && waistImproving) {
-        trendMessages.push("体重不降但腰围下降，可能仍在减脂，不必只看体重。");
-      }
-      if (lowStepDays >= 2) {
-        trendMessages.push("最近多日步数不足，建议提高日常活动量。");
-      }
-      if (highCardioDays >= 2) {
-        trendMessages.push("最近多日有氧偏高，注意恢复。");
-      }
-      if (!trendMessages.length) {
-        trendMessages.push("继续看均值趋势，避免对单日体重波动作强结论。");
-      }
-
-      return {
-        status,
-        statusReason,
-        risk,
-        riskReason: riskReasons.length ? riskReasons.join("；") : "昨日有氧和训练类型在可控范围。",
-        trainToday: trainOk ? "适合" : "恢复",
-        trainReason: trainOk ? "训练负荷可控" : "今日有氧或 HIIT 负荷偏高",
-        cardioAdvice,
-        carbAdvice,
-        mainAdvice,
-        trendAdvice: trendMessages.join(" "),
-        avg3,
-        avg7,
-        dailyScore: `${passed}/4`,
-        dailyScoreNote: passed >= 4 ? "达标很好" : passed >= 3 ? "基本达标" : "昨日执行偏弱"
-      };
-    }
-
-    function renderAnalysis(record) {
-      const result = analyze(record);
-      if (!result) return;
-
-      $("#analysisDate").textContent = record.date;
-      const pill = $("#statusPill");
-      pill.textContent = result.status;
-      pill.className = "status-pill";
-      if (result.status === "CUT") pill.classList.add("status-cut");
-      if (result.status === "PLATEAU") pill.classList.add("status-plateau");
-      if (result.status === "RECOVERY") pill.classList.add("status-recovery");
-
-      $("#statusReason").textContent = result.statusReason;
-      $("#trainToday").textContent = result.trainToday;
-      $("#trainReason").textContent = result.trainReason;
-      $("#riskLevel").textContent = result.risk;
-      $("#riskReason").textContent = result.riskReason;
-      $("#riskLevel").style.color = result.risk === "HIGH" ? "var(--bad)" : result.risk === "MEDIUM" ? "var(--warn)" : "var(--good)";
-      $("#dailyScore").textContent = result.dailyScore;
-      $("#dailyScoreNote").textContent = result.dailyScoreNote;
-      $("#cardioAdvice").textContent = result.cardioAdvice;
-      $("#carbAdvice").textContent = result.carbAdvice;
-      $("#mainAdvice").textContent = result.mainAdvice;
-      $("#trendAdvice").textContent = result.trendAdvice;
-      $("#avg3Weight").textContent = result.avg3 === null ? "--" : result.avg3.toFixed(1);
-      $("#avg7Weight").textContent = result.avg7 === null ? "--" : result.avg7.toFixed(1);
-    }
-
-    function resetAnalysis() {
-      $("#analysisDate").textContent = "等待今日记录";
-      const pill = $("#statusPill");
-      pill.textContent = "--";
-      pill.className = "status-pill";
-      $("#statusReason").textContent = "保存记录后生成";
-      $("#trainToday").textContent = "--";
-      $("#trainReason").textContent = "--";
-      $("#riskLevel").textContent = "--";
-      $("#riskReason").textContent = "--";
-      $("#riskLevel").style.color = "";
-      $("#dailyScore").textContent = "--";
-      $("#dailyScoreNote").textContent = "--";
-      $("#cardioAdvice").textContent = "--";
-      $("#carbAdvice").textContent = "--";
-      $("#mainAdvice").textContent = "--";
-      $("#trendAdvice").textContent = "--";
-      $("#avg3Weight").textContent = "--";
-      $("#avg7Weight").textContent = "--";
-    }
-
     function getWindowRecords(days) {
       const sorted = sortedRecords();
       if (!sorted.length) return [];
+      if (days === "all") return sorted;
       const end = new Date(sorted[sorted.length - 1].date + "T00:00:00");
       const start = new Date(end);
       start.setDate(end.getDate() - days + 1);
@@ -693,7 +533,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       return {
         type: "line",
         data: {
-          labels: data.map((item) => item.date.slice(5)),
+          labels: data.map((item) => chartRange === "all" ? item.date : item.date.slice(5)),
           datasets: [{
             label,
             data: data.map((item) => item.value),
@@ -755,6 +595,94 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     function jin(value) {
       return `${value.toFixed(1)}`;
+    }
+
+    function validWeightRecords(source = sortedRecords()) {
+      return source
+        .map((item) => ({ ...item, weight: toNumber(item.weight) }))
+        .filter((item) => item.weight !== null);
+    }
+
+    function periodWeightStats(days) {
+      const weighted = validWeightRecords(days === "all" ? sortedRecords() : getWindowRecords(days));
+      return {
+        count: weighted.length,
+        change: weighted.length >= 2 ? weighted[weighted.length - 1].weight - weighted[0].weight : null
+      };
+    }
+
+    function longTermMetrics() {
+      const weighted = validWeightRecords();
+      if (!weighted.length) return null;
+      const first = weighted[0];
+      const latest = weighted[weighted.length - 1];
+      const spanDays = daysBetween(first.date, latest.date);
+      const elapsedDays = spanDays + 1;
+      const change = latest.weight - first.weight;
+      const highest = Math.max(...weighted.map((item) => item.weight));
+      const lowest = Math.min(...weighted.map((item) => item.weight));
+      const target = toNumber(settings.targetWeight);
+      const configuredStart = toNumber(settings.startWeight);
+      const targetGap = target === null ? null : Math.max(0, latest.weight - target);
+      let progress = null;
+      if (configuredStart !== null && target !== null && configuredStart !== target) {
+        progress = clamp(((configuredStart - latest.weight) / (configuredStart - target)) * 100, 0, 100);
+      }
+      const weeklyChange = weighted.length >= 2 && spanDays > 0 ? change / (spanDays / 7) : null;
+      return {
+        elapsedDays,
+        recordCount: records.length,
+        first,
+        latest,
+        change,
+        highest,
+        lowest,
+        targetGap,
+        progress,
+        weeklyChange,
+        stage7: periodWeightStats(7),
+        stage30: periodWeightStats(30),
+        stageAll: periodWeightStats("all")
+      };
+    }
+
+    function formatSignedChange(value) {
+      if (value === null) return "数据不足";
+      if (Math.abs(value) < 0.05) return "0.0";
+      return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+    }
+
+    function renderLongTermOverview() {
+      const metrics = longTermMetrics();
+      if (!metrics) {
+        ["longDays", "longRecordCount", "longStartWeight", "longCurrentWeight", "longChange", "longRange", "longTargetGap", "longProgress", "longWeeklyChange", "stage7Change", "stage30Change", "stageAllChange", "stage7Count", "stage30Count"]
+          .forEach((id) => { $(`#${id}`).textContent = "--"; });
+        $("#longOverviewText").textContent = "开始记录后，这里会显示你的长期成果。";
+        return;
+      }
+
+      $("#longDays").textContent = String(metrics.elapsedDays);
+      $("#longRecordCount").textContent = String(metrics.recordCount);
+      $("#longStartWeight").textContent = metrics.first.weight.toFixed(1);
+      $("#longCurrentWeight").textContent = metrics.latest.weight.toFixed(1);
+      $("#longChange").textContent = formatSignedChange(metrics.change);
+      $("#longRange").textContent = `${metrics.highest.toFixed(1)} / ${metrics.lowest.toFixed(1)}`;
+      $("#longTargetGap").textContent = metrics.targetGap === null ? "--" : metrics.targetGap.toFixed(1);
+      $("#longProgress").textContent = metrics.progress === null ? "--" : `${Math.round(metrics.progress)}%`;
+      $("#longWeeklyChange").textContent = metrics.weeklyChange === null ? "数据不足" : formatSignedChange(metrics.weeklyChange);
+      $("#stage7Change").textContent = formatSignedChange(metrics.stage7.change);
+      $("#stage30Change").textContent = formatSignedChange(metrics.stage30.change);
+      $("#stageAllChange").textContent = formatSignedChange(metrics.stageAll.change);
+      $("#stage7Count").textContent = String(metrics.stage7.count);
+      $("#stage30Count").textContent = String(metrics.stage30.count);
+
+      const achievement = metrics.change < 0
+        ? `累计下降 ${Math.abs(metrics.change).toFixed(1)} 斤`
+        : metrics.change > 0
+          ? `累计变化 +${metrics.change.toFixed(1)} 斤`
+          : "体重保持稳定";
+      const progressText = metrics.progress === null ? "" : ` 你已经完成目标的 ${Math.round(metrics.progress)}%。`;
+      $("#longOverviewText").textContent = `已记录 ${metrics.elapsedDays} 天，${achievement}。${progressText}`;
     }
 
     function renderLossBreakdown() {
@@ -965,24 +893,6 @@ const WEIGHT_UNIT_VERSION = "jin";
       `).join("");
     }
 
-    function renderTodayActions(record) {
-      const container = $("#todayActions");
-      if (!record) {
-        container.innerHTML = `<div class="action-item">保存记录后生成今日行动。</div>`;
-        return;
-      }
-
-      const highTrainingLoad = (record.cardio ?? 0) > 90 || (record.trainingType === "HIIT" && (record.cardio ?? 0) >= 45);
-      const actions = [
-        "今日步数目标：≥ 8000",
-        highTrainingLoad ? "今日有氧建议：轻松走 20-30 分钟" : "今日有氧建议：低强度有氧（Zone2）30-45 分钟",
-        highTrainingLoad ? "今日训练：建议恢复" : "今日训练：适合力量",
-        record.dietControlled === "yes" ? "今日饮食：保持正常控制，不做极端补偿" : "今日饮食：回到正常控制，不做极端补偿"
-      ];
-
-      container.innerHTML = actions.map((action) => `<div class="action-item">${action}</div>`).join("");
-    }
-
     function renderWeeklySummary() {
       const recent = getWindowRecords(7);
       const weightItems = recent.filter((item) => item.weight !== null);
@@ -996,19 +906,17 @@ const WEIGHT_UNIT_VERSION = "jin";
         : null;
       const cardioTotal = recent.reduce((sum, item) => sum + (item.cardio ?? 0), 0);
       const strengthCount = recent.filter((item) => item.strength).length;
-      const dietDays = recent.filter((item) => item.dietControlled === "yes").length;
 
       $("#weeklyRecordDays").textContent = String(recordDays);
       $("#weeklyAvgWeight").textContent = avgWeight === null ? "--" : avgWeight.toFixed(1);
       $("#weeklyAvgSteps").textContent = avgSteps === null ? "--" : Math.round(avgSteps).toString();
       $("#weeklyCardioTotal").textContent = String(cardioTotal);
       $("#weeklyStrengthCount").textContent = String(strengthCount);
-      $("#weeklyDietDays").textContent = String(dietDays);
 
       if (recordDays < 3) {
         $("#weeklySummaryText").textContent = "本周数据不足，先继续积累记录。";
-      } else if ((avgSteps ?? 0) >= 8000 && dietDays >= Math.max(1, recordDays - 1)) {
-        $("#weeklySummaryText").textContent = "本周执行稳定，继续保持步数和饮食控制。";
+      } else if ((avgSteps ?? 0) >= 8000) {
+        $("#weeklySummaryText").textContent = "本周记录与活动量较稳定，继续观察体重均值趋势。";
       } else if ((avgSteps ?? 0) < 8000) {
         $("#weeklySummaryText").textContent = "本周日常活动偏少，优先把平均步数拉到 8000 以上。";
       } else {
@@ -1043,9 +951,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         `步数：${formatPromptInteger(record.steps)}`,
         `有氧分钟：${formatPromptInteger(record.cardio, "分钟")}`,
         `力量训练：${record.strength ? "是" : "否"}`,
-        `训练类型：${record.trainingType || "未记录"}`,
-        `饮食控制：${record.dietControlled === "yes" ? "是" : record.dietControlled === "no" ? "否" : "未记录"}`,
-        `碳水等级：${record.carbLevel || "未记录"}`
+        `训练类型：${record.trainingType || "未记录"}`
       ].join("；")).join("\n");
     }
 
@@ -1077,8 +983,19 @@ const WEIGHT_UNIT_VERSION = "jin";
       const target = toNumber(settings.targetWeight);
       const targetGap = latest && target !== null ? Math.max(0, latest.weight - target) : null;
       const weeklySpeed = currentWeeklySpeedForPrompt();
+      const long = longTermMetrics();
 
       return [
+        `已记录天数：${long ? `${long.elapsedDays}天` : "记录不足"}`,
+        `记录次数：${long ? `${long.recordCount}次` : "0次"}`,
+        `起始体重：${long ? `${long.first.weight.toFixed(1)}斤` : "记录不足"}`,
+        `当前体重：${long ? `${long.latest.weight.toFixed(1)}斤` : "记录不足"}`,
+        `累计变化：${long ? `${formatSignedChange(long.change)}斤` : "记录不足"}`,
+        `最高 / 最低体重：${long ? `${long.highest.toFixed(1)}斤 / ${long.lowest.toFixed(1)}斤` : "记录不足"}`,
+        `最近 7 天变化：${long && long.stage7.change !== null ? `${formatSignedChange(long.stage7.change)}斤` : "数据不足"}`,
+        `最近 30 天变化：${long && long.stage30.change !== null ? `${formatSignedChange(long.stage30.change)}斤` : "数据不足"}`,
+        `全周期变化：${long && long.stageAll.change !== null ? `${formatSignedChange(long.stageAll.change)}斤` : "数据不足"}`,
+        `目标完成进度：${long && long.progress !== null ? `${Math.round(long.progress)}%` : "未设置或数据不足"}`,
         `3 日均重：${avg3 === null ? "记录不足" : `${avg3.toFixed(1)}斤`}`,
         `7 日均重：${avg7 === null ? "记录不足" : `${avg7.toFixed(1)}斤`}`,
         `最近 7 天平均步数：${avgSteps7 === null ? "记录不足" : Math.round(avgSteps7)}`,
@@ -1099,7 +1016,12 @@ const WEIGHT_UNIT_VERSION = "jin";
         month: {
           title: "最近 30 天减脂复盘",
           days: 30,
-          question: "请帮我判断最近 30 天整体趋势、减脂速度是否合适、是否需要调整训练或饮食策略。"
+          question: "请结合全周期背景，判断最近 30 天趋势和减脂速度是否合适，训练与活动节奏是否需要调整。"
+        },
+        all: {
+          title: "全周期减脂复盘",
+          days: "all",
+          question: "请帮我复盘整个减脂周期：判断长期趋势、阶段变化、执行稳定性和目标进度，并给出下一阶段最重要的 3 项行动。"
         },
         plateau: {
           title: "平台期排查",
@@ -1113,8 +1035,10 @@ const WEIGHT_UNIT_VERSION = "jin";
         }
       };
       const config = promptTypes[type] || promptTypes.week;
-      const recent = getRecentRecordsForAi(config.days);
-      const rangeNote = type === "plateau" ? "优先参考最近 14-30 天记录" : `参考最近 ${config.days} 天记录`;
+      const recent = config.days === "all" ? sortedRecords() : getRecentRecordsForAi(config.days);
+      const rangeNote = type === "plateau"
+        ? "优先参考最近 14-30 天记录"
+        : config.days === "all" ? "全部历史记录" : `参考最近 ${config.days} 天记录`;
 
       return [
         `# ${config.title}`,
@@ -1122,7 +1046,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         "## 用户背景",
         "我正在减脂。以下数据来自我的个人减脂记录网页。",
         "请你像一个理性、谨慎的减脂教练一样分析。",
-        "不要过度解读单日体重波动，优先看趋势、执行稳定性和恢复风险。",
+        "不要过度解读单日体重波动，优先看长期趋势、阶段变化、执行稳定性和恢复风险。",
         "",
         "## 目标设置",
         `起始体重：${formatPromptNumber(settings.startWeight, 1, "斤")}`,
@@ -1132,7 +1056,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         "## 已计算指标",
         buildAiMetrics(),
         "",
-        `## 最近记录（${rangeNote}）`,
+        `## 记录数据（${rangeNote}）`,
         formatRecordsForPrompt(recent),
         "",
         "## 请回答",
@@ -1161,17 +1085,11 @@ const WEIGHT_UNIT_VERSION = "jin";
     }
 
     function renderAll(preferredRecord) {
-      const record = preferredRecord || getCurrentRecord();
-      if (record) {
-        renderAnalysis(record);
-      } else {
-        resetAnalysis();
-      }
       renderCharts();
       renderProgress();
       renderLossBreakdown();
+      renderLongTermOverview();
       renderHistory();
-      renderTodayActions(record);
       renderWeeklySummary();
     }
 
@@ -1212,14 +1130,9 @@ const WEIGHT_UNIT_VERSION = "jin";
         fillForm(today);
       } else {
         setStepperManualValue("weight", defaultWeightValue(), 140);
-        setStepperManualValue("waist", latestRecord()?.waist, 80);
-        setStepperValue("steps", 8000, 8000);
-        setStepperManualValue("neck", latestRecord()?.neck, 35);
-        setStepperManualValue("hip", latestRecord()?.hip, 95);
-        setStepperManualValue("thigh", latestRecord()?.thigh, 55);
-        setStepperManualValue("arm", latestRecord()?.arm, 30);
-        setStepperValue("cardio", 0, 0);
+        ["waist", "steps", "neck", "hip", "thigh", "arm", "cardio"].forEach(clearStepperValue);
         hasCardio.value = "no";
+        fields.strength.checked = false;
         fields.trainingType.value = "力量";
         updateCardioDetails();
       }
@@ -1228,6 +1141,10 @@ const WEIGHT_UNIT_VERSION = "jin";
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const record = recordFromForm();
+      if (record.weight === null) {
+        toast("请填写体重。");
+        return;
+      }
       upsertRecord(record);
       if (!settings.startWeight) {
         settings.startWeight = record.weight;
@@ -1235,11 +1152,11 @@ const WEIGHT_UNIT_VERSION = "jin";
         saveSettings();
       }
       renderAll(record);
-      setActiveTab("advice");
+      setActiveTab("trend");
       try {
         const backup = await writeRecordBackup(record);
         renderBackupStatus();
-        toast(backup.skipped ? `已保存，已切到建议页；${backup.reason}。` : "已保存，已切到建议页。");
+        toast(backup.skipped ? `已保存，已更新长期趋势；${backup.reason}。` : "已保存，已更新长期趋势。");
       } catch (error) {
         renderBackupStatus("本地已保存，备份写入失败");
         toast("本地已保存，但备份写入失败。");
@@ -1276,6 +1193,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       settings.targetDate = $("#targetDate").value;
       saveSettings();
       renderProgress();
+      renderLongTermOverview();
       toast("目标已保存。");
     });
 
@@ -1304,15 +1222,19 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     $("#range7").addEventListener("click", () => {
       chartRange = 7;
-      $("#range7").classList.add("active");
-      $("#range30").classList.remove("active");
+      document.querySelectorAll(".segmented button").forEach((button) => button.classList.toggle("active", button.id === "range7"));
       renderCharts();
     });
 
     $("#range30").addEventListener("click", () => {
       chartRange = 30;
-      $("#range30").classList.add("active");
-      $("#range7").classList.remove("active");
+      document.querySelectorAll(".segmented button").forEach((button) => button.classList.toggle("active", button.id === "range30"));
+      renderCharts();
+    });
+
+    $("#rangeAll").addEventListener("click", () => {
+      chartRange = "all";
+      document.querySelectorAll(".segmented button").forEach((button) => button.classList.toggle("active", button.id === "rangeAll"));
       renderCharts();
     });
 
@@ -1322,7 +1244,6 @@ const WEIGHT_UNIT_VERSION = "jin";
       if (loadDate) {
         const record = records.find((item) => item.date === loadDate);
         fillForm(record);
-        renderAnalysis(record);
         setActiveTab("record");
       }
       if (deleteDate && confirm(`删除 ${deleteDate} 的记录？`)) {

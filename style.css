@@ -158,7 +158,6 @@
     }
 
     .app.view-record [data-view-panel="record"],
-    .app.view-advice [data-view-panel="advice"],
     .app.view-trend [data-view-panel="trend"],
     .app.view-data [data-view-panel="data"],
     .app.view-ai [data-view-panel="ai"] {
@@ -565,6 +564,19 @@
       background: #fbfbfa;
       padding: 12px;
       font-size: 14px;
+    }
+
+    .long-term-callout {
+      margin-bottom: 12px;
+      border-left: 3px solid var(--ink);
+      background: #fbfbfa;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .long-term-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .ai-panel {
