@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f8f6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>AI 减脂进度追踪</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -52,21 +55,16 @@
       <div class="stack">
         <form class="card" id="entryForm" data-view-panel="record">
           <div class="section-title">
-            <h2>输入区</h2>
+            <h2>今日记录</h2>
             <div class="input-title-actions">
               <button class="btn small" id="copyPreviousBtn" type="button">沿用上次数据</button>
               <span class="hint" id="backupStatus">本地保存，备份未设置</span>
             </div>
           </div>
 
-          <div class="grid">
-            <div class="subsection">今天早上的身体数据</div>
-            <div class="field">
-              <label for="date">记录日期</label>
-              <input id="date" name="date" type="date" required />
-            </div>
-            <div class="field">
-              <label for="weight">体重 斤</label>
+          <div class="record-primary">
+            <div class="field weight-field">
+              <label for="weight">今日体重</label>
               <input id="weight" name="weight" type="hidden" required />
               <div class="stepper" data-target="weight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
                 <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
@@ -77,8 +75,20 @@
                 <summary>手动输入</summary>
                 <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="weight" />
               </details>
-              <span class="hint">本工具使用斤作为体重单位。</span>
             </div>
+            <button class="btn primary block record-save" type="submit">保存体重</button>
+          </div>
+
+          <details class="supplemental-record">
+            <summary>
+              <span>补充记录</span>
+              <small>日期、围度与昨日运动</small>
+            </summary>
+            <div class="grid supplemental-grid">
+              <div class="field">
+                <label for="date">记录日期</label>
+                <input id="date" name="date" type="date" required />
+              </div>
             <div class="field">
               <label for="waist">腰围 cm</label>
               <input id="waist" name="waist" type="hidden" />
@@ -222,11 +232,10 @@
               </div>
             </details>
           </div>
-
-          <button class="btn primary block" type="submit">保存记录</button>
+          </details>
         </form>
 
-        <section class="card" data-view-panel="data">
+        <section class="card data-goal" data-view-panel="data">
           <div class="section-title">
             <h2>目标设置</h2>
             <span class="hint">用于进度与预计日期</span>
@@ -301,10 +310,10 @@
             </div>
           </div>
         </section>
-        <section class="card" data-view-panel="data">
+        <section class="card data-transfer" data-view-panel="data">
           <div class="section-title">
-            <h2>数据管理</h2>
-            <span class="hint">低频操作</span>
+            <h2>备份与导入导出</h2>
+            <span class="hint">数据保管</span>
           </div>
           <div class="grid">
             <div class="field">
@@ -317,9 +326,16 @@
             <button class="btn" id="backupFolderBtn" type="button">选择备份文件夹</button>
             <button class="btn" id="exportBtn" type="button">导出数据</button>
             <button class="btn" id="importBtn" type="button">导入数据</button>
-            <button class="btn danger" id="clearBtn" type="button">清空数据</button>
             <input id="importFile" type="file" accept="application/json" hidden />
           </div>
+        </section>
+        <section class="card danger-zone" data-view-panel="data">
+          <div class="section-title">
+            <h2>危险操作</h2>
+            <span class="hint">不可撤销</span>
+          </div>
+          <p class="danger-copy">清空当前用户的全部记录和目标设置。执行前需要输入 CLEAR 确认。</p>
+          <button class="btn danger danger-action" id="clearBtn" type="button">清空当前用户数据</button>
         </section>
       </div>
 
@@ -529,7 +545,7 @@
         <section class="card" id="chartsSection" data-view-panel="trend">
           <div class="chart-toolbar">
             <div class="section-title" style="margin: 0;">
-              <h2>图表区</h2>
+              <h2>趋势图表</h2>
             </div>
             <div class="segmented" aria-label="图表范围">
               <button id="range7" class="active" type="button">7天</button>
@@ -538,6 +554,11 @@
             </div>
           </div>
           <div class="charts">
+            <div class="chart-box chart-box-primary">
+              <h3>累计变化</h3>
+              <canvas id="cumulativeChart"></canvas>
+              <div class="chart-empty hidden" id="cumulativeEmpty">至少需要 2 条体重记录</div>
+            </div>
             <div class="chart-box">
               <h3>体重趋势</h3>
               <canvas id="weightChart"></canvas>
@@ -550,23 +571,19 @@
               <h3>步数趋势</h3>
               <canvas id="stepsChart"></canvas>
             </div>
-            <div class="chart-box">
-              <h3>累计变化</h3>
-              <canvas id="cumulativeChart"></canvas>
-              <div class="chart-empty hidden" id="cumulativeEmpty">至少需要 2 条体重记录</div>
-            </div>
           </div>
         </section>
 
-        <section class="card" data-view-panel="ai">
+        <section class="card ai-generator" data-view-panel="ai">
           <div class="section-title">
-            <h2>AI 复盘</h2>
-            <span class="hint">本页只在本地生成文本，不会自动上传数据。复制后请自行决定是否发送给 AI。</span>
+            <h2>AI 复盘生成器</h2>
+            <span class="hint">本页只在本地生成文本，不会自动上传数据。</span>
           </div>
           <div class="ai-panel">
             <div class="ai-note">
               本功能只负责整理数据和生成 Prompt。复制后是否发送给 ChatGPT，由你自己决定。
             </div>
+            <div class="ai-type-label">选择复盘类型</div>
             <div class="ai-actions">
               <button class="btn" type="button" data-ai-prompt="week">生成 7 天复盘 Prompt</button>
               <button class="btn" type="button" data-ai-prompt="month">生成 30 天复盘 Prompt</button>
@@ -584,7 +601,7 @@
           </div>
         </section>
 
-        <section class="card" data-view-panel="data">
+        <section class="card data-history" data-view-panel="data">
           <div class="section-title">
             <h2>历史记录</h2>
             <span class="hint">点击日期可载入编辑</span>

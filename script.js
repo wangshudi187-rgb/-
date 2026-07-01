@@ -607,7 +607,7 @@ const WEIGHT_UNIT_VERSION = "jin";
         cumulativeChart = null;
       }
       if (hasCumulativeTrend) {
-        cumulativeChart = buildChart("#cumulativeChart", null, "累计变化 斤", cumulativeData, "#176b3a");
+        cumulativeChart = buildChart("#cumulativeChart", null, "累计变化 斤", cumulativeData, "#34c759");
       }
     }
 
@@ -1150,6 +1150,9 @@ const WEIGHT_UNIT_VERSION = "jin";
       const prompt = buildAiPrompt(type);
       const textarea = $("#aiPromptText");
       textarea.value = prompt;
+      document.querySelectorAll("[data-ai-prompt]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.aiPrompt === type);
+      });
       try {
         if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard API unavailable");
         await navigator.clipboard.writeText(prompt);
@@ -1314,6 +1317,7 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     $("#clearAiPromptBtn").addEventListener("click", () => {
       $("#aiPromptText").value = "";
+      document.querySelectorAll("[data-ai-prompt]").forEach((button) => button.classList.remove("active"));
       toast("Prompt 已清空。");
     });
     $("#copyCurrentAiPromptBtn").addEventListener("click", copyCurrentAiPrompt);
