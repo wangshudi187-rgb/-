@@ -1214,9 +1214,10 @@ const WEIGHT_UNIT_VERSION = "jin";
       renderWeeklySummary();
     }
 
-    function toast(message, action) {
+    function toast(message, action, kind = "") {
       const el = $("#toast");
       el.textContent = message;
+      el.classList.toggle("success", kind === "success");
       if (action) {
         const button = document.createElement("button");
         button.type = "button";
@@ -1282,7 +1283,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       try {
         const backup = await writeRecordBackup(record);
         renderBackupStatus();
-        toast(backup.skipped ? `已保存，已更新长期趋势；${backup.reason}。` : "已保存，已更新长期趋势。");
+        toast(backup.skipped ? `已保存，已更新长期趋势；${backup.reason}。` : "已保存，已更新长期趋势。", null, "success");
       } catch (error) {
         renderBackupStatus("本地已保存，备份写入失败");
         toast("本地已保存，但备份写入失败。");
@@ -1323,7 +1324,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       renderLongTermOverview();
       renderGoalSummary();
       setGoalEditorOpen(false);
-      toast("目标已保存。");
+      toast("目标已保存。", null, "success");
     });
 
     $("#editGoalBtn").addEventListener("click", () => {

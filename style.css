@@ -33,6 +33,14 @@
       font: inherit;
     }
 
+    button {
+      transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
     .hidden {
       display: none !important;
     }
@@ -192,11 +200,12 @@
     .app.view-data [data-view-panel="data"],
     .app.view-ai [data-view-panel="ai"] {
       display: block;
+      animation: view-enter 0.24s ease both;
     }
 
     .stack {
       display: grid;
-      gap: 16px;
+      gap: 22px;
     }
 
     .card {
@@ -204,7 +213,18 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 18px;
+      padding: 22px;
+    }
+
+    @keyframes view-enter {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .record-primary {
@@ -402,7 +422,7 @@
     }
 
     .btn:active {
-      transform: translateY(1px);
+      transform: scale(0.98);
     }
 
     .btn:disabled {
@@ -688,6 +708,52 @@
       font-weight: 700;
     }
 
+    .dashboard-hero {
+      padding: 26px;
+    }
+
+    .dashboard-status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .dashboard-status-item {
+      min-height: 110px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfb;
+      padding: 14px;
+    }
+
+    .dashboard-status-item .name {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .dashboard-value {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .dashboard-value strong {
+      font-size: 30px;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
+
+    .dashboard-value span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .milestone-note {
       margin: -4px 0 14px;
       border: 1px solid rgba(52, 199, 89, 0.18);
@@ -700,6 +766,35 @@
 
     .long-term-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .dashboard-details {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .dashboard-details > summary {
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .dashboard-details .long-term-grid {
+      margin-top: 12px;
+    }
+
+    .stage-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stage-grid .metric {
+      min-height: 108px;
+    }
+
+    .stage-grid .metric .value {
+      color: var(--accent-ink);
+      font-size: 28px;
     }
 
     .goal-empty {
@@ -1028,21 +1123,23 @@
     }
 
     .table-wrap {
+      display: none;
       overflow-x: auto;
       border: 1px solid var(--line);
       border-radius: var(--radius);
     }
 
     .history-cards {
-      display: none;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
     .history-card {
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: #fbfbfa;
-      padding: 13px;
+      padding: 16px;
       display: grid;
       gap: 10px;
     }
@@ -1107,6 +1204,21 @@
       padding: 20px;
     }
 
+    .modal-backdrop:not(.hidden) .modal-card {
+      animation: modal-enter 0.2s ease both;
+    }
+
+    @keyframes modal-enter {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     .modal-card-wide {
       width: min(680px, 100%);
       max-height: calc(100vh - 40px);
@@ -1152,6 +1264,40 @@
       pointer-events: auto;
     }
 
+    .toast.success {
+      background: var(--accent-ink);
+      padding-left: 40px;
+    }
+
+    .toast.success::before {
+      content: "✓";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--accent-ink);
+      font-size: 13px;
+      font-weight: 800;
+      transform: translateY(-50%);
+      animation: check-pop 0.28s ease both;
+    }
+
+    @keyframes check-pop {
+      from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.55);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+      }
+    }
+
     .toast-action {
       margin-left: 10px;
       border: 1px solid rgba(255, 255, 255, 0.34);
@@ -1181,6 +1327,11 @@
         padding-bottom: calc(92px + env(safe-area-inset-bottom));
       }
 
+      .toast {
+        right: 10px;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+      }
+
       .topbar {
         align-items: stretch;
         flex-direction: column;
@@ -1199,6 +1350,27 @@
 
       .goal-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dashboard-hero {
+        padding: 18px;
+      }
+
+      .dashboard-status-grid,
+      .stage-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .dashboard-status-item,
+      .stage-grid .metric {
+        min-height: 100px;
+        padding: 10px;
+      }
+
+      .dashboard-value strong,
+      .stage-grid .metric .value {
+        font-size: 23px;
       }
 
       .actions .btn {
@@ -1286,6 +1458,7 @@
 
       .history-cards {
         display: grid;
+        grid-template-columns: 1fr;
       }
 
       .modal-backdrop {
@@ -1303,5 +1476,16 @@
       .modal-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
       }
     }

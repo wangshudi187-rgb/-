@@ -81,7 +81,7 @@
 
           <details class="supplemental-record">
             <summary>
-              <span>补充记录</span>
+              <span>补充数据</span>
               <small>日期、围度与昨日运动</small>
             </summary>
             <div class="grid supplemental-grid">
@@ -340,92 +340,84 @@
       </div>
 
       <div class="stack">
-        <section class="card" data-view-panel="trend">
+        <section class="card dashboard-hero" data-view-panel="trend">
           <div class="section-title">
-            <h2>长期总览</h2>
+            <h2>长期状态</h2>
             <span class="hint">从第一条体重记录开始</span>
           </div>
           <div class="long-term-callout" id="longOverviewText">开始记录后，这里会显示你的长期成果。</div>
-          <div class="milestone-note" id="longMilestoneText">完成 7 天记录后会显示阶段里程碑。</div>
-          <div class="metric-grid long-term-grid">
-            <div class="metric">
-              <div class="name">已坚持天数</div>
-              <div id="longDays" class="value">--</div>
-              <div class="note">天</div>
+          <div class="dashboard-status-grid">
+            <div class="dashboard-status-item">
+              <div class="name">坚持天数</div>
+              <div class="dashboard-value"><strong id="longDays">--</strong><span>天</span></div>
             </div>
-            <div class="metric">
-              <div class="name">记录次数</div>
-              <div id="longRecordCount" class="value">--</div>
-              <div class="note">次</div>
-            </div>
-            <div class="metric">
-              <div class="name">起始体重</div>
-              <div id="longStartWeight" class="value">--</div>
-              <div class="note">斤</div>
-            </div>
-            <div class="metric">
-              <div class="name">当前体重</div>
-              <div id="longCurrentWeight" class="value">--</div>
-              <div class="note">斤</div>
-            </div>
-            <div class="metric">
+            <div class="dashboard-status-item">
               <div class="name">累计变化</div>
-              <div id="longChange" class="value">--</div>
-              <div class="note">斤</div>
+              <div class="dashboard-value"><strong id="longChange">--</strong><span>斤</span></div>
             </div>
-            <div class="metric">
-              <div class="name">最高 / 最低</div>
-              <div id="longRange" class="value">--</div>
-              <div class="note">斤</div>
-            </div>
-            <div class="metric">
-              <div class="name">距离目标</div>
-              <div id="longTargetGap" class="value">--</div>
-              <div class="note">斤</div>
-            </div>
-            <div class="metric">
-              <div class="name">目标完成</div>
-              <div id="longProgress" class="value">--</div>
-              <div class="note">按目标设置</div>
-            </div>
-            <div class="metric">
-              <div class="name">平均每周变化</div>
-              <div id="longWeeklyChange" class="value">--</div>
-              <div class="note">斤 / 周</div>
+            <div class="dashboard-status-item">
+              <div class="name">长期趋势</div>
+              <div class="dashboard-value"><strong id="longWeeklyChange">--</strong><span>斤 / 周</span></div>
             </div>
           </div>
+          <div class="milestone-note" id="longMilestoneText">完成 7 天记录后会显示阶段里程碑。</div>
+          <details class="dashboard-details">
+            <summary>更多长期数据</summary>
+            <div class="metric-grid long-term-grid">
+              <div class="metric">
+                <div class="name">记录次数</div>
+                <div id="longRecordCount" class="value">--</div>
+                <div class="note">次</div>
+              </div>
+              <div class="metric">
+                <div class="name">起始体重</div>
+                <div id="longStartWeight" class="value">--</div>
+                <div class="note">斤</div>
+              </div>
+              <div class="metric">
+                <div class="name">当前体重</div>
+                <div id="longCurrentWeight" class="value">--</div>
+                <div class="note">斤</div>
+              </div>
+              <div class="metric">
+                <div class="name">最高 / 最低</div>
+                <div id="longRange" class="value">--</div>
+                <div class="note">斤</div>
+              </div>
+              <div class="metric">
+                <div class="name">距离目标</div>
+                <div id="longTargetGap" class="value">--</div>
+                <div class="note">斤</div>
+              </div>
+              <div class="metric">
+                <div class="name">目标完成</div>
+                <div id="longProgress" class="value">--</div>
+                <div class="note">按目标设置</div>
+              </div>
+            </div>
+          </details>
         </section>
 
-        <section class="card" data-view-panel="trend">
+        <section class="card stage-dashboard" data-view-panel="trend">
           <div class="section-title">
             <h2>阶段变化</h2>
             <span class="hint">短期波动仅作参考</span>
           </div>
-          <div class="metric-grid">
+          <div class="metric-grid stage-grid">
             <div class="metric">
-              <div class="name">最近 7 天变化</div>
+              <div class="name">7 天</div>
               <div id="stage7Change" class="value">--</div>
-              <div class="note">斤</div>
+              <div class="note"><span id="stage7Count">--</span> 条记录 · 斤</div>
             </div>
             <div class="metric">
-              <div class="name">最近 30 天变化</div>
+              <div class="name">30 天</div>
               <div id="stage30Change" class="value">--</div>
-              <div class="note">斤</div>
+              <div class="note"><span id="stage30Count">--</span> 条记录 · 斤</div>
             </div>
             <div class="metric">
-              <div class="name">全周期变化</div>
+              <div class="name">全周期</div>
               <div id="stageAllChange" class="value">--</div>
               <div class="note">斤</div>
-            </div>
-            <div class="metric">
-              <div class="name">7 天记录次数</div>
-              <div id="stage7Count" class="value">--</div>
-              <div class="note">次</div>
-            </div>
-            <div class="metric">
-              <div class="name">30 天记录次数</div>
-              <div id="stage30Count" class="value">--</div>
-              <div class="note">次</div>
             </div>
           </div>
         </section>
