@@ -45,6 +45,7 @@ const WEIGHT_UNIT_VERSION = "jin";
     let appInitialized = false;
     let steppersInitialized = false;
     let lastDeletedRecord = null;
+    let pendingDeleteDate = null;
     let activeTab = "record";
 
     function todayString() {
@@ -167,7 +168,20 @@ const WEIGHT_UNIT_VERSION = "jin";
           [weightChart, waistChart, stepsChart, cumulativeChart].forEach((chart) => chart && chart.resize());
         }, 80);
       }
-      if (tab === "data") renderHistory();
+      if (tab === "data") {
+        renderHistory();
+        setDataView("overview");
+      }
+    }
+
+    function setDataView(view) {
+      $(".data-goal").classList.toggle("hidden", view !== "overview");
+      document.querySelectorAll(".data-manager-panel").forEach((panel) => {
+        panel.classList.toggle("hidden", view !== "manager");
+      });
+      $(".advanced-panel").classList.toggle("hidden", view !== "advanced");
+      if (view === "advanced") $(".advanced-danger").open = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function updateCardioDetails() {
@@ -738,9 +752,11 @@ const WEIGHT_UNIT_VERSION = "jin";
       const emptyText = $("#goalEmptyText");
       summaryMetrics.classList.toggle("hidden", !hasGoal);
       emptyText.classList.toggle("hidden", hasGoal);
-      $("#editGoalBtn").textContent = hasGoal ? "修改目标" : "设置目标";
+      $("#editGoalLabel").textContent = hasGoal ? "修改目标" : "设置目标";
       if (!hasGoal) {
         emptyText.textContent = "尚未设置目标";
+        $("#goalSummaryProgressLabel").textContent = "尚未设置";
+        $("#goalSummaryBar").style.width = "0%";
         return;
       }
 
@@ -754,11 +770,12 @@ const WEIGHT_UNIT_VERSION = "jin";
       $("#goalSummaryDate").textContent = settings.targetDate || "--";
       $("#goalSummaryGap").textContent = gap === null ? "--" : gap.toFixed(1);
       $("#goalSummaryProgress").textContent = progress === null ? "--" : `${Math.round(progress)}%`;
+      $("#goalSummaryProgressLabel").textContent = progress === null ? "等待体重记录" : `${Math.round(progress)}%`;
+      $("#goalSummaryBar").style.width = `${progress === null ? 0 : Math.round(progress)}%`;
     }
 
     function setGoalEditorOpen(open) {
-      $("#goalSummary").classList.toggle("hidden", open);
-      $("#goalEditForm").classList.toggle("hidden", !open);
+      $("#goalEditDialog").classList.toggle("hidden", !open);
     }
 
     function renderLossBreakdown() {
@@ -929,7 +946,14 @@ const WEIGHT_UNIT_VERSION = "jin";
     function renderHistory() {
       const body = $("#historyBody");
       const cards = $("#historyCards");
+      const deleteSelect = $("#deleteRecordSelect");
+      const deleteButton = $("#requestDeleteRecordBtn");
       const sorted = sortedRecords().reverse();
+      deleteSelect.innerHTML = [
+        `<option value="">选择记录日期</option>`,
+        ...sorted.map((item) => `<option value="${item.date}">${item.date} · ${item.weight ?? "--"} 斤</option>`)
+      ].join("");
+      deleteButton.disabled = sorted.length === 0;
       if (!sorted.length) {
         body.innerHTML = `<tr><td class="empty" colspan="9">暂无记录</td></tr>`;
         cards.innerHTML = `<div class="empty">暂无记录</div>`;
@@ -938,7 +962,7 @@ const WEIGHT_UNIT_VERSION = "jin";
 
       body.innerHTML = sorted.map((item) => `
         <tr>
-          <td><button class="btn" type="button" data-load="${item.date}">${item.date}</button></td>
+          <td>${item.date}</td>
           <td>${item.weight ?? "--"}</td>
           <td>${item.waist ?? "--"}</td>
           <td>${item.steps ?? "--"}</td>
@@ -946,7 +970,7 @@ const WEIGHT_UNIT_VERSION = "jin";
           <td>${item.thigh ?? "--"}</td>
           <td>${item.strength ? "力量" : item.trainingType || "--"}</td>
           <td>${formatUpdatedAt(item.updatedAt)}</td>
-          <td><button class="btn danger" type="button" data-delete="${item.date}">删除</button></td>
+          <td><button class="btn" type="button" data-load="${item.date}">编辑</button></td>
         </tr>
       `).join("");
 
@@ -965,7 +989,6 @@ const WEIGHT_UNIT_VERSION = "jin";
           <div class="history-saved-time">保存时间：${formatUpdatedAt(item.updatedAt)}</div>
           <div class="history-card-actions">
             <button class="btn" type="button" data-load="${item.date}">编辑</button>
-            <button class="btn danger" type="button" data-delete="${item.date}">删除</button>
           </div>
         </article>
       `).join("");
@@ -1307,7 +1330,15 @@ const WEIGHT_UNIT_VERSION = "jin";
       populateGoalEditor();
       setGoalEditorOpen(true);
     });
-    $("#cancelGoalEditBtn").addEventListener("click", () => setGoalEditorOpen(false));
+    $("#cancelGoalEditBtn").addEventListener("click", () => {
+      populateGoalEditor();
+      setGoalEditorOpen(false);
+    });
+
+    $("#openDataManagerBtn").addEventListener("click", () => setDataView("manager"));
+    $("#backFromDataManagerBtn").addEventListener("click", () => setDataView("overview"));
+    $("#openAdvancedSettingsBtn").addEventListener("click", () => setDataView("advanced"));
+    $("#backFromAdvancedBtn").addEventListener("click", () => setDataView("overview"));
 
     $("#copyPreviousBtn").addEventListener("click", copyPreviousData);
 
@@ -1354,34 +1385,35 @@ const WEIGHT_UNIT_VERSION = "jin";
 
     function handleHistoryClick(event) {
       const loadDate = event.target.dataset.load;
-      const deleteDate = event.target.dataset.delete;
       if (loadDate) {
         const record = records.find((item) => item.date === loadDate);
         fillForm(record);
         setActiveTab("record");
       }
-      if (deleteDate && confirm(`删除 ${deleteDate} 的记录？`)) {
-        const deletedIndex = records.findIndex((item) => item.date === deleteDate);
-        const deletedRecord = records[deletedIndex];
-        lastDeletedRecord = deletedRecord ? { record: deletedRecord, index: deletedIndex } : null;
-        records = records.filter((item) => item.date !== deleteDate);
-        saveRecords();
-        renderAll();
-        toast("记录已删除。", {
-          label: "撤销",
-          onClick: () => {
-            if (!lastDeletedRecord) return;
-            const exists = records.some((item) => item.date === lastDeletedRecord.record.date);
-            if (!exists) {
-              records.splice(Math.min(lastDeletedRecord.index, records.length), 0, lastDeletedRecord.record);
-              saveRecords();
-              renderAll(lastDeletedRecord.record);
-              toast("已撤销删除。");
-            }
-            lastDeletedRecord = null;
+    }
+
+    function deleteRecordByDate(deleteDate) {
+      const deletedIndex = records.findIndex((item) => item.date === deleteDate);
+      const deletedRecord = records[deletedIndex];
+      if (!deletedRecord) return;
+      lastDeletedRecord = { record: deletedRecord, index: deletedIndex };
+      records = records.filter((item) => item.date !== deleteDate);
+      saveRecords();
+      renderAll();
+      toast("记录已删除。", {
+        label: "撤销",
+        onClick: () => {
+          if (!lastDeletedRecord) return;
+          const exists = records.some((item) => item.date === lastDeletedRecord.record.date);
+          if (!exists) {
+            records.splice(Math.min(lastDeletedRecord.index, records.length), 0, lastDeletedRecord.record);
+            saveRecords();
+            renderAll(lastDeletedRecord.record);
+            toast("已撤销删除。");
           }
-        });
-      }
+          lastDeletedRecord = null;
+        }
+      });
     }
 
     $("#historyBody").addEventListener("click", handleHistoryClick);
@@ -1526,6 +1558,36 @@ const WEIGHT_UNIT_VERSION = "jin";
       }
     });
 
+    function closeDeleteDialog() {
+      $("#deleteConfirmDialog").classList.add("hidden");
+      $("#deleteConfirmationInput").value = "";
+      pendingDeleteDate = null;
+    }
+
+    $("#requestDeleteRecordBtn").addEventListener("click", () => {
+      const selectedDate = $("#deleteRecordSelect").value;
+      if (!selectedDate) {
+        toast("请先选择要删除的记录。");
+        return;
+      }
+      pendingDeleteDate = selectedDate;
+      $("#deleteDialogDate").textContent = selectedDate;
+      $("#deleteConfirmDialog").classList.remove("hidden");
+      $("#deleteConfirmationInput").focus();
+    });
+
+    $("#cancelDeleteBtn").addEventListener("click", closeDeleteDialog);
+
+    $("#confirmDeleteBtn").addEventListener("click", () => {
+      if ($("#deleteConfirmationInput").value !== "DELETE" || !pendingDeleteDate) {
+        toast("未删除记录。");
+        return;
+      }
+      const deleteDate = pendingDeleteDate;
+      closeDeleteDialog();
+      deleteRecordByDate(deleteDate);
+    });
+
     function closeClearDialog() {
       $("#clearConfirmDialog").classList.add("hidden");
       $("#clearConfirmationInput").value = "";
@@ -1550,6 +1612,7 @@ const WEIGHT_UNIT_VERSION = "jin";
       initializeForm();
       renderAll();
       closeClearDialog();
+      setDataView("overview");
       toast("已清空。");
     });
 

@@ -237,8 +237,8 @@
 
         <section class="card data-goal" data-view-panel="data">
           <div class="section-title">
-            <h2>目标设置</h2>
-            <span class="hint">用于进度与预计日期</span>
+            <h2>我的目标</h2>
+            <span class="hint">只读概览</span>
           </div>
           <div id="goalSummary">
             <div class="goal-empty" id="goalEmptyText">尚未设置目标</div>
@@ -269,48 +269,32 @@
                 <div class="note">按当前体重</div>
               </div>
             </div>
-            <button class="btn block" id="editGoalBtn" type="button">设置目标</button>
+            <div class="goal-summary-progress">
+              <div class="progress-meta">
+                <span>当前进度</span>
+                <span id="goalSummaryProgressLabel">尚未设置</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" id="goalSummaryBar"></div>
+              </div>
+            </div>
           </div>
-          <div class="goal-edit hidden" id="goalEditForm">
-            <div class="grid">
-              <div class="field">
-                <label for="startWeight">起始体重 斤</label>
-                <input id="startWeight" type="hidden" />
-                <div class="stepper" data-target="startWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
-                  <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                  <div class="stepper-display"><strong data-stepper-value>160.0</strong><span>斤</span></div>
-                  <button class="stepper-btn" type="button" data-step-action="increase">+</button>
-                </div>
-                <details class="manual-entry">
-                  <summary>手动输入</summary>
-                  <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="startWeight" />
-                </details>
-              </div>
-              <div class="field">
-                <label for="targetWeight">目标体重 斤</label>
-                <input id="targetWeight" type="hidden" />
-                <div class="stepper" data-target="targetWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
-                  <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
-                  <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
-                  <button class="stepper-btn" type="button" data-step-action="increase">+</button>
-                </div>
-                <details class="manual-entry">
-                  <summary>手动输入</summary>
-                  <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="targetWeight" />
-                </details>
-              </div>
-              <div class="field full">
-                <label for="targetDate">目标日期</label>
-                <input id="targetDate" type="date" />
-              </div>
-            </div>
-            <div class="goal-edit-actions">
-              <button class="btn primary" id="saveSettingsBtn" type="button">保存目标</button>
-              <button class="btn" id="cancelGoalEditBtn" type="button">取消</button>
-            </div>
+          <div class="data-entry-list">
+            <button class="data-entry" id="editGoalBtn" type="button">
+              <span><strong id="editGoalLabel">修改目标</strong><small>调整起始体重、目标体重与日期</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <button class="data-entry" id="openDataManagerBtn" type="button">
+              <span><strong>数据管理</strong><small>历史记录、用户切换与导入导出</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <button class="data-entry subtle" id="openAdvancedSettingsBtn" type="button">
+              <span><strong>高级设置</strong><small>低频与敏感操作</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
           </div>
         </section>
-        <section class="card data-transfer" data-view-panel="data">
+        <section class="card data-transfer data-manager-panel hidden" data-view-panel="data">
           <div class="section-title">
             <h2>备份与导入导出</h2>
             <span class="hint">数据保管</span>
@@ -329,13 +313,29 @@
             <input id="importFile" type="file" accept="application/json" hidden />
           </div>
         </section>
-        <section class="card danger-zone" data-view-panel="data">
+        <section class="card danger-zone advanced-panel hidden" data-view-panel="data">
           <div class="section-title">
-            <h2>危险操作</h2>
-            <span class="hint">不可撤销</span>
+            <div>
+              <h2>高级设置</h2>
+              <span class="hint">默认隐藏的低频操作</span>
+            </div>
+            <button class="btn small" id="backFromAdvancedBtn" type="button">返回</button>
           </div>
-          <p class="danger-copy">清空当前用户的全部记录和目标设置。执行前需要输入 CLEAR 确认。</p>
-          <button class="btn danger danger-action" id="clearBtn" type="button">清空当前用户数据</button>
+          <details class="advanced-danger">
+            <summary>危险操作</summary>
+            <div class="advanced-danger-content">
+              <div class="field">
+                <label for="deleteRecordSelect">删除某条记录</label>
+                <select id="deleteRecordSelect">
+                  <option value="">选择记录日期</option>
+                </select>
+                <button class="btn danger" id="requestDeleteRecordBtn" type="button">删除选中记录</button>
+              </div>
+              <div class="danger-divider"></div>
+              <p class="danger-copy">清空当前用户的全部记录和目标设置。执行前需要输入 CLEAR 确认。</p>
+              <button class="btn danger danger-action" id="clearBtn" type="button">清空当前用户数据</button>
+            </div>
+          </details>
         </section>
       </div>
 
@@ -601,10 +601,13 @@
           </div>
         </section>
 
-        <section class="card data-history" data-view-panel="data">
+        <section class="card data-history data-manager-panel hidden" data-view-panel="data">
           <div class="section-title">
-            <h2>历史记录</h2>
-            <span class="hint">点击日期可载入编辑</span>
+            <div>
+              <h2>数据管理</h2>
+              <span class="hint">历史记录与数据迁移</span>
+            </div>
+            <button class="btn small" id="backFromDataManagerBtn" type="button">返回</button>
           </div>
           <div class="table-wrap">
             <table class="history-table">
@@ -631,6 +634,68 @@
       </div>
     </section>
   </main>
+
+  <div class="modal-backdrop hidden" id="goalEditDialog" role="dialog" aria-modal="true" aria-labelledby="goalEditTitle">
+    <div class="modal-card modal-card-wide">
+      <div class="section-title">
+        <div>
+          <h2 id="goalEditTitle">修改目标</h2>
+          <span class="hint">保存后才会更新目标设置</span>
+        </div>
+      </div>
+      <div class="goal-edit" id="goalEditForm">
+        <div class="grid">
+          <div class="field">
+            <label for="startWeight">起始体重 斤</label>
+            <input id="startWeight" type="hidden" />
+            <div class="stepper" data-target="startWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
+              <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+              <div class="stepper-display"><strong data-stepper-value>160.0</strong><span>斤</span></div>
+              <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+            </div>
+            <details class="manual-entry">
+              <summary>手动输入</summary>
+              <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="startWeight" />
+            </details>
+          </div>
+          <div class="field">
+            <label for="targetWeight">目标体重 斤</label>
+            <input id="targetWeight" type="hidden" />
+            <div class="stepper" data-target="targetWeight" data-step="0.2" data-min="80" data-max="300" data-decimals="1" data-unit="斤">
+              <button class="stepper-btn" type="button" data-step-action="decrease">-</button>
+              <div class="stepper-display"><strong data-stepper-value>140.0</strong><span>斤</span></div>
+              <button class="stepper-btn" type="button" data-step-action="increase">+</button>
+            </div>
+            <details class="manual-entry">
+              <summary>手动输入</summary>
+              <input type="number" inputmode="decimal" min="80" max="300" step="0.1" data-manual-for="targetWeight" />
+            </details>
+          </div>
+          <div class="field full">
+            <label for="targetDate">目标日期</label>
+            <input id="targetDate" type="date" />
+          </div>
+        </div>
+        <div class="goal-edit-actions">
+          <button class="btn primary" id="saveSettingsBtn" type="button">保存目标</button>
+          <button class="btn" id="cancelGoalEditBtn" type="button">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="deleteConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="deleteDialogTitle">
+    <div class="modal-card">
+      <h2 id="deleteDialogTitle">确认删除记录</h2>
+      <p>即将删除 <strong id="deleteDialogDate">--</strong> 的记录。请输入 <strong>DELETE</strong> 继续。</p>
+      <label for="deleteConfirmationInput">确认文字</label>
+      <input id="deleteConfirmationInput" type="text" autocomplete="off" placeholder="DELETE" />
+      <div class="modal-actions">
+        <button class="btn" id="cancelDeleteBtn" type="button">取消</button>
+        <button class="btn danger" id="confirmDeleteBtn" type="button">确认删除</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-backdrop hidden" id="clearConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="clearDialogTitle">
     <div class="modal-card">
